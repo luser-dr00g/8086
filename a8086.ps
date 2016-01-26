@@ -1,0 +1,247 @@
+%!
+%a8086.ps Draught2:BREVITY
+[/NULL<0000>/nul 0
+/mem 16#ffff string %16-bit memory
+/CF 0 /OF 0 /AF 0 /ZF 0 /SF 0
+/regs 20 string >>begin %register byte storage
+0{AL AH CL CH DL DH BL BH}{regs 2 index 1 getinterval def 1 add}forall pop
+0{AX CX DX BX SP BP SI DI IP FL}{regs 2 index 2 getinterval def 2 add}forall pop
+
+%getting and fetching
+[/*b{0 get} %get byte from pointer
+/*w{dup *b exch 1 get bbw} %get word from pointer
+/*{{*b *w}W get exec} %get data(W) from pointer
+/bbw{8 bitshift add} %lo-byte hi-byte -> word
+/shiftmask{2 copy neg bitshift 3 1 roll 1 exch bitshift 1 sub and}
+/fetchb{IP *w mem exch get bytedump   IP dup *w 1 add storew} % byte(IP++)
+/fetchw{fetchb fetchb bbw} % word(IP),IP+=2
+
+%storing and accessing
+/storeb{16#ff and 0 exch put} % ptr val8 -> -
+/storew{2 copy storeb -8 bitshift 16#ff and 1 exch put} % ptr val16 -> -
+/stor{{storeb storew}W get exec} % ptr val(W) -> -
+/memptr{16#ffff and mem exch {1 2}W get getinterval} % addr -> ptr(W)
+
+%decoding the mod-reg-reg/mem byte
+/mrm{fetchb 3 shiftmask /RM exch def 3 shiftmask /REG exch def /MOD exch def}
+/REGTAB[[AL CL DL BL AH CH DH BH][AX CX DX BX SP BP SI DI]]
+/decreg{REGTAB W get REG get} % REGTAB[W][REG]
+%2 indexes,   with immed byte,   with immed word
+/2*w{exch *w exch *w add}/fba{fetchb add}/fwa{fetchw add}
+/RMTAB[[{BX SI 2*w}{BX DI 2*w}{BP SI 2*w}{BP DI 2*w}
+    {SI *w}{DI *w}{fetchw}{BX *w}]
+[{BX SI 2*w fba}{BX DI 2*w fba}{BP SI 2*w fba}{BP DI 2*w fba}
+    {SI *w fba}{DI *w fba}{BP *w fba}{BX *w fba}]
+[{BX SI 2*w fwa}{BX DI 2*w fwa}{BP SI 2*w fwa}{BP DI 2*w fwa}
+    {SI *w fwa}{DI *w fwa}{BP *w fwa}{BX *w fwa}]]
+/decrm{MOD 3 eq{REGTAB W get RM get} %MOD=3:register mode
+    {RMTAB MOD get RM get exec memptr}ifelse} % RMTAB[MOD][RM] -> addr -> ptr
+
+%setting and storing flags
+/flagw{OF 11 bitshift SF 7 bitshift or ZF 6 bitshift or AF 4 bitshift CF or}
+/wflag{dup 1 and /CF exch def dup -4 bitshift 1 and /AF exch def
+    dup -6 bitshift 1 and /ZF exch def dup -7 bitshift 1 and /SF exch def
+    dup -11 bitshift 1 and /OF exch def}
+/nz1{0 ne{1}{0}ifelse}
+/logflags{/CF 0 def /OF 0 def /AF 0 def %clear mathflags
+    dup {16#80 16#8000}W get and nz1 /SF exch def
+    dup {16#ff 16#ffff}W get and 0 eq{1}{0}ifelse /ZF exch def}
+/mathflags{{z y x}{exch def}forall
+    /CF z {16#ff00 16#7fff0000}W get and nz1 def
+    /OF z x xor z y xor and {16#80 16#8000}W get and nz1 def
+    /AF x y xor z xor 16#10 and nz1 def
+    z} %leave the result on stack
+
+%opcodes (each followed by 'stor')  %% { OPTAB fetchb get exec stor } loop
+/ADD{2 copy add logflags mathflags}
+/OR{or logflags}
+/ADC{CF add ADD}
+/SBB{D 1 xor {exch}repeat CF add 2 copy sub logflags mathflags}
+/AND{and logflags}
+/SUB{D 1 xor {exch}repeat 2 copy sub logflags mathflags}
+/XOR{xor logflags}
+/CMP{3 2 roll pop NULL 3 1 roll SUB} %dummy stor target
+/INC{t CF exch dup * 1 ADD 3 2 roll /CF exch def}
+/DEC{t CF exch dup * 1 SUB 3 2 roll /CF exch def}
+/PUSH{SP dup *w 2 sub storew   *w SP *w memptr exch}
+/POP{SP *w memptr *w   SP dup *w 2 add storew}
+
+/jrel{w {CBW IP *w add IP exch}{NULL exch}ifelse}
+/JO{fetchb OF 1 eq jrel }
+/JNO{fetchb OF 0 eq jrel }
+/JB{fetchb CF 1 eq jrel }
+/JNB{fetchb CF 0 eq jrel }
+/JZ{fetchb ZF 1 eq jrel }
+/JNZ{fetchb ZF 0 eq jrel }
+/JBE{fetchb CF ZF or 1 eq jrel }
+/JNBE{fetchb CF ZF or 0 eq jrel }
+/JS{fetchb SF 1 eq jrel }
+/JNS{fetchb SF 0 eq jrel }
+/JL{fetchb SF OF xor 1 eq jrel }
+/JNL{fetchb SF OF xor 0 eq jrel }
+/JLE{fetchb SF OF xor ZF or 1 eq jrel }
+/JNLE{fetchb SF OF xor ZF or 0 eq jrel }
+
+/bw{dup 16#80 and 0 ne{16#ff xor 1 add 16#ffff xor 1 add}if}
+/IMMTAB{ADD OR ADC SBB AND SUB XOR CMP }cvlit
+/immed{ W 2 eq{ /W 1 def
+		mrm decrm dup * fetchb bw
+	}{ mrm decrm dup * {fetchb fetchw}W get exec }ifelse
+	exch IMMTAB REG get dup == exec }
+
+%/TEST{ }
+/XCHG{3 2 roll pop 2 copy exch * 4 2 roll * stor }
+/AXCH{w dup AX XCHG }
+/NOP{ NULL nul }
+/pMOV{D{exch}repeat pop }
+/mMOV{ 3 1 roll pop pop }
+/MOV{ }
+/LEA{w mrm decreg RMTAB MOD get RM get exec }
+
+/CBW{dup 16#80 and 0 ne {16#ff xor 1 add 16#ffff xor 1 add } if }
+/CWD{dup 16#8000 and 0 ne {16#ffff xor 1 add neg } if }
+/CALL{w xp /xp{}def fetchw IP PUSH storew IP dup *w 3 2 roll add dsp /dsp{}def }
+%/WAIT{ }
+/PUSHF{NULL dup flagw storew 2 copy PUSH }
+/POPF{NULL dup POP *w wflag }
+%/SAHF{ }
+%/LAHF{ }
+
+%/MOVS{ }
+%/CMPS{ }
+%/STOS{ }
+%/LODS{ }
+%/SCAS{ }
+/RET{w IP POP storew SP dup * 3 2 roll add }
+%/LES{ }
+%/LDS{ }
+
+/JMP{IP dup fetchw exch *w add}
+/sJMP{IP dup fetchb bw exch *w add}
+
+/HLT{exit}
+/CMC{/CF CF 1 xor def NULL nul}
+/CLC{/CF 0 def NULL nul}
+/STC{/CF 1 def NULL nul}
+
+/NOT{not logflags }
+/NEG{neg logflags }
+/GRP1TAB{TEST --- NOT NEG MUL IMUL DIV IDIV } cvlit
+/Grp1{mrm decrm dup * GRP1TAB REG get
+dup ==
+exec }
+/GRP2TAB{INC DEC {id CALL}{l id CALL}{id JMP}{l id JMP} PUSH --- } cvlit
+/Grp2{mrm decrm GRP2TAB REG get
+dup ==
+exec }
+
+%optab shortcuts
+/2*{exch * exch *}
+/rm{mrm decreg decrm D index 3 1 roll 2*} % fetch,decode mrm -> dest *reg *r-m
+/rmp{mrm decreg decrm D index 3 1 roll} % fetch,decode mrm -> dest reg r-m
+/ia{ {{AL dup *b fetchb}{AX dup *w fetchw}}W get exec } %immed to accumulator
+/is{/W 2 def}
+/b{/W 0 def} %select byte operation
+/w{/W 1 def} %select word operation
+/t{/D 1 def} %dest = reg
+/f{/D 0 def} %dest = r/m
+/xp{} /dsp{}
+%/far{ /xp { <0000> PUSH storew } /dsp { fetchw pop } def }
+/i{ {fetchb fetchw}W get exec }
+
+/OPTAB{
+{b f rm ADD}{w f rm ADD}{b t rm ADD}{w t rm ADD}{b ia ADD}{w ia ADD}{ES PUSH}{ES POP} %00-07
+ {b f rm OR}{w f rm OR}{b t rm OR}{w t rm OR}{b ia OR}{w ia OR}{CS PUSH}{}            %08-0F
+{b f rm ADC}{w f rm ADC}{b t rm ADC}{w t rm ADC}{b ia ADC}{w ia ADC}{SS PUSH}{SS POP} %10-17
+ {b f rm SBB}{w f rm SBB}{b t rm SBB}{w t rm SBB}{b ia SBB}{w ia SBB}{DS PUSH}{DS POP}%18-1F
+{b f rm AND}{w f rm AND}{b t rm AND}{w t rm AND}{b ia AND}{w ia AND}{ES SEG}{DAA}     %20-27
+ {b f rm SUB}{w f rm SUB}{b t rm SUB}{w t rm SUB}{b ia SUB}{w ia SUB}{CS SEG}{DAS}    %28-2F
+{b f rm XOR}{w f rm XOR}{b t rm XOR}{w t rm XOR}{b ia XOR}{w ia XOR}{SS SEG}{AAA}     %30-37
+ {b f rm CMP}{w f rm CMP}{b t rm CMP}{w t rm CMP}{b ia CMP}{w ia CMP}{DS SEG}{AAS}    %38-3F
+{w AX INC}{w CX INC}{w DX INC}{w BX INC}{w SP INC}{w BP INC}{w SI INC}{w DI INC}      %40-47
+ {w AX DEC}{w CX DEC}{w DX DEC}{w BX DEC}{w SP DEC}{w BP DEC}{w SI DEC}{w DI DEC}     %48-4F
+{AX PUSH}{CX PUSH}{DX PUSH}{BX PUSH}{SP PUSH}{BP PUSH}{SI PUSH}{DI PUSH}              %50-57
+ {AX POP}{CX POP}{DX POP}{BX POP}{SP POP}{BP POP}{SI POP}{DI POP}                     %58-5F
+{}{}{}{}{}{}{}{}  {}{}{}{}{}{}{}{}                                                    %60-6F
+{JO}{JNO}{JB}{JNB}{JZ}{JNZ}{JBE}{JNBE} {JS}{JNS}{JP}{JNP}{JL}{JNL}{JLE}{JNLE}         %70-7F
+
+{b f immed}{w f immed}{b f immed}{is f immed}{b TEST}{w TEST}{b rmp XCHG}{w rmp XCHG}   %80-87
+ {b f rm pMOV}{w f rm pMOV}{b t rm pMOV}{w t rm pMOV}                                 %88-8B
+   {sr f rm pMOV}{LEA}{sr t rm pMOV}{w mrm decrm POP}                                 %8C-8F
+{NOP}{CX AXCH}{DX AXCH}{BX AXCHG}{SP AXCH}{BP AXCH}{SI AXCH}{DI AXCH}             %90-97
+ {CBW}{CWD}{far CALL}{WAIT}{PUSHF}{POPF}{SAHF}{LAHF}                                  %98-9F
+{b AL m MOV}{w AX m MOV}{b m AL MOV}{b AX m MOV}{MOVS}{MOVS}{CMPS}{CMPS}              %A0-A7
+ {b i a TEST}{w i a TEST}{STOS}{STOS}{LODS}{LODS}{SCAS}{SCAS}                         %A8-AF
+{b AL i MOV}{b CL i MOV}{b DL i MOV}{b BL i MOV}                                      %B0-B3
+ {b AH i MOV}{b CH i MOV}{b DH i MOV}{b BH i MOV}                                     %B4-B7
+ {w AX i MOV}{w CX i MOV}{w DX i MOV}{w BX i MOV}                                     %B8-BB
+ {w SP i MOV}{w BP i MOV}{w SI i MOV}{w DI i MOV}                                     %BC-BF
+{}{}{fetchw RET}{0 RET}{LES}{LDS}{b f rm i mMOV}{w f rm i mMOV}                       %C0-B7
+ {}{}{fetchw RET}{0 RET}{3 INT}{fetchb INT}{INTO}{IRET}                               %C8-CF
+{b Shift}{w Shift}{b v Shift}{w v Shift}{AAM}{AAD}{}{XLAT}                            %D0-D7
+ {0 ESC}{1 ESC}{2 ESC}{3 ESC}{4 ESC}{5 ESC}{6 ESC}{7 ESC}                             %D8-DF
+{LOOPNZ}{LOOPZ}{LOOP}{JCXZ}{b IN}{w IN}{b OUT}{w OUT}                                 %E0-E7
+ {CALL}{JMP}{far JMP}{sJMP}{v b IN}{v w IN}{v b OUT}{v w OUT}                         %E8-EF
+{LOCK}{}{REP}{z REP}{HLT}{CMC}{b Grp1}{w Grp}                                         %F0-F7
+ {CLC}{STC}{CLI}{STI}{CLD}{STD}{b Grp2}{w Grp2}                                       %F8-FF
+}cvlit
+
+/break{ /hook /pause load def }
+/c{ /hook {} def }
+/doprompt{
+	(\nbreak>)print
+	flush(%lineedit)(r)file
+	cvx {exec}stopped pop }
+/pause{ doprompt }
+/hook{}
+
+/stdout(%stdout)(w)file
+/bytedump{ <00> dup 0 3 index put stdout exch writehexstring ( )print }
+/regdump{ REGTAB 1 get{ stdout exch writehexstring ( )print }forall
+    stdout IP writehexstring ( )print
+    {(NC )(CA )}CF get print
+    {(NO )(OV )}OF get print
+    {(NS )(SN )}SF get print
+    {(NZ )(ZR )}ZF get print
+	stdout 16#1d3 w memptr writehexstring
+	(\n)print
+}
+/mainloop{{
+    regdump
+    OPTAB fetchb get
+    dup ==
+    exec
+    pstack flush
+	hook
+    stor
+    /ic ic 1 add def ictime
+}loop}
+
+/printvideo{
+    0 1 28 {
+        80 mul 16#8000 add mem exch 80 getinterval {
+            dup 0 eq { pop 32 } if
+			dup 32 lt 1 index 126 gt or { pop 46 } if
+            stdout exch write
+        } forall (\n)print
+    } for
+    (\n)print
+}
+/ic 0
+/ictime{ic timeq mod 0 eq {onq} if}
+/timeq 10
+/onq{ %printvideo
+}
+>>begin
+currentdict{dup type/arraytype eq 1 index xcheck and
+    {bind def}{pop pop}ifelse}forall
+
+SP 16#100 storew
+(codegolf.8086)(r)file mem readstring pop
+pop[
+
+break
+mainloop
+printvideo
+
+%eof
