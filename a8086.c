@@ -87,7 +87,9 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
            x=get_((void*)x,w); \
            y=w?fetchw():fetchb();
 
-#define SETPF *fl |= ((z&1)+(z&2)+(z&4)+(z&8)+(z&16)+(z&32)+(z&64)+(z&128))%2 ?0:PF; //count bits
+#define SETPF *fl |= \
+            ((z&1)+!!(z&2)+!!(z&4)+!!(z&8)+!!(z&16)+!!(z&32)+!!(z&64)+!!(z&128))%2 \
+            ?0:PF; //count bits
 #define F(f) !!(*fl&f) //test flag bit
 
     // flags set by logical operators
