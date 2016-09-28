@@ -174,12 +174,14 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
 #define POPF POP(fl)
 #define SAHF x=*fl; y=*ah; x=(x&~0xff)|y; *fl=x;
 #define LAHF *ah=(UC)*fl;
-#define mMOV if(d){ x=get_(mem+fetchw(),w); if(w)*ax=x; else*al=x; } \
+#define mMOV if(d){ x=get_(mem+fetchw(),w); w?*ax=x:(*al=x); } \
              else { put_(mem+fetchw(),w?*ax:*al,w); }
 #define MOVS
 #define CMPS
-#define STOS
-#define LODS
+#define STOS if(w){ put_(di,*ax,w); *di+=d?-2:2; } \
+             else { put_(di,*al,w); *di+=d?-1:1; }
+#define LODS if(w){ *ax=get_(si,w); *si+=d?-2:2; } \
+             else { *al=get_(si,w); *si+=d?-1:1; }
 #define SCAS
 #define iMOVb(r) (*r)=fetchb();
 #define iMOVw(r) (*r)=fetchw();
@@ -234,7 +236,7 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
                            case 2: CALL; break; \
                            case 3: CALL; break; \
                            case 4: *ip+=(S)y; break; \
-                           case 5: JMP; break; \
+                           case 5: /*JMP*/ *ip+=get_((S*)y,1); break; \
                            case 6: PUSH((S*)y); break; }
 #define CLC *fl=*fl&~CF;
 #define STC *fl=*fl|CF;
