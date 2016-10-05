@@ -176,13 +176,12 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
 #define LAHF *ah=(UC)*fl;
 #define mMOV if(d){ x=get_(mem+fetchw(),w); w?*ax=x:(*al=x); } \
              else { put_(mem+fetchw(),w?*ax:*al,w); }
-#define MOVS
-#define CMPS
-#define STOS if(w){ put_(di,*ax,w); *di+=d?-2:2; } \
-             else { put_(di,*al,w); *di+=d?-1:1; }
-#define LODS if(w){ *ax=get_(si,w); *si+=d?-2:2; } \
-             else { *al=get_(si,w); *si+=d?-1:1; }
-#define SCAS
+#define Offset (w+1)*(1-d*2) //(w,d)=? (0,0)=1 (1,0)=2 (0,1)=-1 (1,1)=-2
+#define MOVS put_(di,get_(si,w),w); *di+=Offset; *si+=Offset;
+#define CMPS x=(I)si; y=(I)di; LDXY CMP *di+=Offset; *si+=Offset;
+#define STOS put_(di,w?*ax:*al,w); *di+=Offset;
+#define LODS if(w) *ax=get_(si,w); else *al=get_(si,w); *si+=Offset;
+#define SCAS z=(x=w?*ax:*al)-(y=get_(di,w)); LOGFLAGS MATHFLAGS *di+=Offset;
 #define iMOVb(r) (*r)=fetchb();
 #define iMOVw(r) (*r)=fetchw();
 #define RET(v) POP(ip); if(v)*sp+=v*2;
