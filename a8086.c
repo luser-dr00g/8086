@@ -8,6 +8,8 @@
 #define P printf
 #define R return
 #define T typedef
+#define CASE break;case
+#define DEFAULT break;default
 T intptr_t I; T uintptr_t U;
 T short S; T unsigned short US;
 T signed char C; T unsigned char UC; T void V;  // to make everything shorter
@@ -47,6 +49,15 @@ V put_(void*p,U x,U w){ if(w){ *(UC*)p=x; ((UC*)p)[1]=x>>8; }else *(UC*)p=x; }
 UC fetchb(){ U x = get_(mem+(*ip)++,0); if(trace)P("%02x(%03o) ",x,x); R x; }
 US fetchw(){I w=fetchb();R w|(fetchb()<<8);}
 
+void interrupt( UC no ){
+  switch(no){
+  CASE 0x21: switch(*ah){
+             CASE 0x01: *al = getchar();
+             CASE 0x02: putchar(*al=*dl); if(*al=='\t')*al=' ';
+             }
+  }
+}
+
 T struct rm{U mod,reg,r_m;}rm;      // the three fields of the mod-reg-r/m byte
 rm mrm(U m){ R(rm){ (m>>6)&3, (m>>3)&7, m&7 }; }    // crack the mrm byte into fields
 U decreg(U reg,U w){    // decode the reg field, yielding a uintptr_t to the register (byte or word)
@@ -55,10 +66,10 @@ U decreg(U reg,U w){    // decode the reg field, yielding a uintptr_t to the reg
 U rs(US*x,US*y){ R get_(x,1)+get_(y,1); }  // fetch and sum two full-words
 U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
     U x=(U[]){rs(bx,si),rs(bx,di),rs(bp,si),rs(bp,di),get_(si,1),get_(di,1),get_(bp,1),get_(bx,1)}[r.r_m];
-    switch(r.mod){ case 0: if (r.r_m==6) R (U)(mem+fetchw()); break;
-                   case 1: x+=fetchb(); break;
-                   case 2: x+=fetchw(); break;
-                   case 3: R decreg(r.r_m,w); }
+    switch(r.mod){ CASE 0: if (r.r_m==6) R (U)(mem+fetchw());
+                   CASE 1: x+=fetchb();
+                   CASE 2: x+=fetchw();
+                   CASE 3: R decreg(r.r_m,w); }
     R (U)(mem+x); }
 
 // opcode helpers
@@ -149,14 +160,14 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
             if(trace){ \
                 P("%s ", \
                   (C*[]){"ADD","OR","ADC","SBB","AND","SUB","XOR","CMP"}[r.reg]); } \
-            switch(r.reg){case 0:ADD break; \
-                          case 1:OR break; \
-                          case 2:ADC break; \
-                          case 3:SBB break; \
-                          case 4:AND break; \
-                          case 5:SUB break; \
-                          case 6:XOR break; \
-                          case 7:CMP break; }
+            switch(r.reg){CASE 0:ADD \
+                          CASE 1:OR \
+                          CASE 2:ADC \
+                          CASE 3:SBB \
+                          CASE 4:AND \
+                          CASE 5:SUB \
+                          CASE 6:XOR \
+                          CASE 7:CMP }
 #define IMMIS IMM(w=0;,w=1;x=(S)(C)x;)
 #define TEST z=x&y; LOGFLAGS MATHFLAGS
 #define XCHG f=x;z=y; LDXY if(w){*(US*)f=y;*(US*)z=x;}else{*(UC*)f=y;*(UC*)z=x;}
@@ -189,7 +200,7 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
 #define LDS
 #define iMOVm if(w){iMOVw((US*)y)}else{iMOVb((UC*)y)}
 #define fRET(v) POP(cs); RET(v)
-#define INT(v)
+#define INT(v) interrupt(v);
 #define INT0
 #define IRET
 #define Shift rm r=mrm(fetchb());
@@ -220,23 +231,23 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
 #define Grp1 rm r=mrm(fetchb()); \
              y=decrm(r,w); \
              if(trace)P("%s ", (C*[]){}[r.reg]); \
-             switch(r.reg){case 0: TEST; break; \
-                           case 2: NOT; break; \
-                           case 3: NEG; break; \
-                           case 4: MUL; break; \
-                           case 5: IMUL; break; \
-                           case 6: DIV; break; \
-                           case 7: IDIV; break; }
+             switch(r.reg){CASE 0: TEST; \
+                           CASE 2: NOT; \
+                           CASE 3: NEG; \
+                           CASE 4: MUL; \
+                           CASE 5: IMUL; \
+                           CASE 6: DIV; \
+                           CASE 7: IDIV; }
 #define Grp2 rm r=mrm(fetchb()); \
              y=decrm(r,w); \
              if(trace)P("%s ", (C*[]){"INC","DEC","CALL","CALL","JMP","JMP","PUSH"}[r.reg]); \
-             switch(r.reg){case 0: INC((S*)y); break; \
-                           case 1: DEC((S*)y); break; \
-                           case 2: CALL; break; \
-                           case 3: CALL; break; \
-                           case 4: *ip+=(S)y; break; \
-                           case 5: /*JMP*/ *ip+=get_((S*)y,1); break; \
-                           case 6: PUSH((S*)y); break; }
+             switch(r.reg){CASE 0: INC((S*)y); \
+                           CASE 1: DEC((S*)y); \
+                           CASE 2: CALL; \
+                           CASE 3: CALL; \
+                           CASE 4: *ip+=(S)y; \
+                           CASE 5: /*JMP*/ *ip=get_((S*)y,1); \
+                           CASE 6: PUSH((S*)y); }
 #define CLC *fl=*fl&~CF;
 #define STC *fl=*fl|CF;
 #define CLI *fl=*fl&~IF;
@@ -337,7 +348,7 @@ V video(){I i;          // dump the (cleaned) video memory to the console
 
 static I ct;        // timer memory for period video dump
 V run(){while(!halt){if(trace)dump();
-    if(!ct--){ct=10; video();}
+    //if(!ct--){ct=10; video();}
     tab[o=fetchb()]();}}
 V dbg(){
     while(!halt){
@@ -359,14 +370,16 @@ I load(C*f){struct stat s; FILE*fp;     // load a file into memory at address ze
     R (fp=fopen(f,"rb"))
         && fstat(fileno(fp),&s) || fread(mem,s.st_size,1,fp); }
 
+#include "forth3.h"
+
 I main(I c,C**v){
     init();
     if(c>1){            // if there's an argument
         load(v[1]);     //     load named file
-    }
-    *sp=0x100;          // initialize stack pointer
+    }else forth(mem);
+    *sp=0x1000;          // initialize stack pointer
     if(debug) dbg();    // if debugging, debug
     else run();         // otherwise, just run
-    video();            // dump final video
-    R 0;}               // remember what R means? cf. line 9
+    //video();            // dump final video
+    return 0;}
 
