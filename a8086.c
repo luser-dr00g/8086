@@ -16,7 +16,7 @@ T signed char C; T unsigned char UC; T void V;  // to make everything shorter
 U o,w,d,f; // opcode, width, direction, extra temp variable (was initially for a flag, hence 'f')
 U x,y,z;   // left operand, right operand, result
 void *p;   // location to receive result
-UC halt,debug=0,trace=1,reg[28],null[2],mem[0xffff]={ // operating flags, register memory, RAM
+UC halt,debug=0,trace=0,reg[28],null[2],mem[0xffff]={ // operating flags, register memory, RAM
     1, (3<<6),        // ADD ax,ax
     1, (3<<6)+(4<<3), // ADD ax,sp
     3, (3<<6)+(4<<3), // ADD sp,ax
@@ -54,9 +54,7 @@ void interrupt( UC no ){
   CASE 0x21: switch(*ah){
              CASE 0x01: *al = getchar();
              CASE 0x02: putchar(*al=*dl); if(*al=='\t')*al=' ';
-             }
-  }
-}
+             }}}
 
 T struct rm{U mod,reg,r_m;}rm;      // the three fields of the mod-reg-r/m byte
 rm mrm(U m){ R(rm){ (m>>6)&3, (m>>3)&7, m&7 }; }    // crack the mrm byte into fields
@@ -67,8 +65,8 @@ U rs(US*x,US*y){ R get_(x,1)+get_(y,1); }  // fetch and sum two full-words
 U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
     U x=(U[]){rs(bx,si),rs(bx,di),rs(bp,si),rs(bp,di),get_(si,1),get_(di,1),get_(bp,1),get_(bx,1)}[r.r_m];
     switch(r.mod){ CASE 0: if (r.r_m==6) R (U)(mem+fetchw());
-                   CASE 1: x+=fetchb();
-                   CASE 2: x+=fetchw();
+                   CASE 1: x+=(I)(C)fetchb();
+                   CASE 2: x+=(I)(S)fetchw();
                    CASE 3: R decreg(r.r_m,w); }
     R (U)(mem+x); }
 
@@ -82,7 +80,8 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
             x=decreg(r.reg,w); \
             y=decrm(r,w); \
             if(trace>1){ P("x:%d\n",x); P("y:%d\n",y); } \
-            p=d?(void*)x:(void*)y;
+            p=d?(void*)x:(void*)y; \
+            if(trace>1){ P("p:%d\n",(U)p); }
 
     // fetch x and y values from x and y pointers
 #define LDXY \
@@ -173,7 +172,7 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
 #define XCHG f=x;z=y; LDXY if(w){*(US*)f=y;*(US*)z=x;}else{*(UC*)f=y;*(UC*)z=x;}
 #define MOV z=d?y:x; RESULT
 #define MOVSEG
-#define LEA RMP z=((UC*)y)-mem; RESULT
+#define LEA RMP z=((UC*)y)-mem; p=(void*)x; RESULT
 #define NOP (void)0;
 #define AXCH(r) x=(U)ax; y=(U)(r); w=1; XCHG
 #define CBW *ax=(S)(C)*al;
@@ -191,10 +190,10 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
 #define MOVS put_(di,get_(si,w),w); *di+=Offset; *si+=Offset;
 #define CMPS x=(I)si; y=(I)di; LDXY CMP *di+=Offset; *si+=Offset;
 #define STOS put_(di,w?*ax:*al,w); *di+=Offset;
-#define LODS if(w) *ax=get_(si,w); else *al=get_(si,w); *si+=Offset;
+#define LODS if(w) *ax=get_(mem+*si,w); else *al=get_(mem+*si,w); *si+=Offset;
 #define SCAS z=(x=w?*ax:*al)-(y=get_(di,w)); LOGFLAGS MATHFLAGS *di+=Offset;
 #define iMOVb(r) (*r)=fetchb();
-#define iMOVw(r) (*r)=fetchw();
+#define iMOVw(r) if(trace>1)P("r:%d\n",(U)r); (*r)=fetchw();
 #define RET(v) POP(ip); if(v)*sp+=v*2;
 #define LES
 #define LDS
@@ -382,4 +381,3 @@ I main(I c,C**v){
     else run();         // otherwise, just run
     //video();            // dump final video
     return 0;}
-

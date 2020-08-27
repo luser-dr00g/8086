@@ -1,13 +1,10 @@
 
 #include "asm8086.h"
 #include "fdict.h"
-/*	 W   = BX
-	 IP  = SI
-	 PSP = SP
-	 RSP = BP
-	 X   = AX
-	 TOS_in_memory              */
-#define NEXT       	LODS, JMP_(R,AX)
+/*	 W   = AX     PSP = SP
+	 X   = BX     RSP = BP
+	 IP  = SI     TOS_in_memory              */
+#define NEXT       	LODS, MOV(,R,BX,AX), MOV(,Z,BX,BX_), JMP_(R,BX)
 #define PUSHRSP(r) 	LEA(,B,BP,BP_),minus(4), MOV(F,B,r,BP_),0
 #define POPRSP(r)  	MOV(,B,r,BP_),0, LEA(,B,BP,BP_),4
 #define minus(x)	1+(0xff^x)
@@ -16,7 +13,7 @@ static inline int
 forth(char *start){
   char *p = start;
   { UC x[] = { HALT, 00, 00 }; memcpy( p, x, sizeof x ); p += 16; } 
-  CODE(enter,  enter,     PUSHRSP(SI), ADDAX,4,0, MOV(,R,DI,AX))
+  HEADLESS(enter,  enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
   CODE(exit,   exit,      POPRSP(SI))
   CODE(emit,   emit,      POP(DX), MOVAXI(00,02), INT(21))
   CODE(key,    key,       MOVAXI(00,01), INT(21), PUSH(AX))
@@ -41,8 +38,13 @@ forth(char *start){
   CODE(bye,    bye,       HALT)
   WORD(double, double,    c_dup, c_plus)
   WORD(dubdub, dubdub,    c_double, c_double)
-  WORD(run,    run,       c_bye)
-  printf("%ud\n", c_enter );
-  { UC x[] = { MOVSII(c_bye%0x100,c_bye/0x100), NEXT }; memcpy( start, x, sizeof x ); }
+  WORD(run,    run,       c_lit, 79, c_emit, c_lit, 75, c_emit, 
+                          c_lit, 5, c_double, c_emit, c_bye)
+  /*
+  printf("enter:%x exit:%x emit:%x lit:%x dup:%x plus:%x bye:%x double:%x run:%x\n", 
+         c_enter, c_exit, c_emit, c_lit, c_dup, c_plus, c_bye, c_double, c_run ); /**/
+  US init = c_run + 2;
+  { UC x[] = { MOVBPI( 0x00,0x20 ), MOVSII(init%0x100,init/0x100), NEXT };
+    memcpy( start, x, sizeof x ); }
   return  0;
 }

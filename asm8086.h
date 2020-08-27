@@ -39,4 +39,5 @@
 #define INT(no) 0xCD,0x##no
 #define MOVAXI(a,b) 0xB8,a,b
 #define MOVSII(a,b) 0xBE,a,b
+#define MOVBPI(a,b) 0xBD,a,b
 #define CALL    0xE8
