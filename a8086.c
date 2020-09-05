@@ -4,6 +4,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<sys/stat.h>
+#include<time.h>
 #include<unistd.h>
 #define P printf
 #define R return
@@ -16,7 +17,7 @@ T signed char C; T unsigned char UC; T void V;  // to make everything shorter
 U o,w,d,f; // opcode, width, direction, extra temp variable (was initially for a flag, hence 'f')
 U x,y,z;   // left operand, right operand, result
 void *p;   // location to receive result
-UC halt,debug=0,trace=0,reg[28],null[2],mem[0xffff]={ // operating flags, register memory, RAM
+UC halt,debug=0,trace=0,reg[28],null[2],mem[0x100000]={ // operating flags, register memory, RAM
     1, (3<<6),        // ADD ax,ax
     1, (3<<6)+(4<<3), // ADD ax,sp
     3, (3<<6)+(4<<3), // ADD sp,ax
@@ -42,18 +43,30 @@ V dump(){ //H(HP)P("\n");
     P("\n");  // ^^^ crack flag bits into strings ^^^
 }
 
+U segment(US *seg, US *adr){ R  ((U)*seg << 4) | *adr; }
+U cs_(US *adr){ R  segment( cs, adr ); }
+U ds_(US *adr){ R  segment( ds, adr ); }
+U ss_(US *adr){ R  segment( ss, adr ); }
+U es_(US *adr){ R  segment( es, adr ); }
+
 // get and put into memory in a strictly little-endian format
 I get_(void*p,U w){R w? *(UC*)p + (((UC*)p)[1]<<8) :*(UC*)p;}
 V put_(void*p,U x,U w){ if(w){ *(UC*)p=x; ((UC*)p)[1]=x>>8; }else *(UC*)p=x; }
-// get byte or word through ip, incrementing ip
-UC fetchb(){ U x = get_(mem+(*ip)++,0); if(trace)P("%02x(%03o) ",x,x); R x; }
+
+// get byte or word through cs:ip, incrementing ip
+//UC fetchb(){ U x = get_(mem+(*ip)++,0); if(trace)P("%02x(%03o) ",x,x); R x; }
+UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); ++*ip; if(trace)P("%02x(%03o) ",x,x); R x; }
 US fetchw(){I w=fetchb();R w|(fetchb()<<8);}
 
 void interrupt( UC no ){
   switch(no){
+  CASE 0x00: printf("div by zero trap\n");
   CASE 0x21: switch(*ah){
              CASE 0x01: *al = getchar();
              CASE 0x02: putchar(*al=*dl); if(*al=='\t')*al=' ';
+	     CASE 0x09: f=*dx; while(mem[f]!='$')putchar(mem[f++]);
+	     CASE 0x2A: {time_t t=time(NULL); struct tm *tm = localtime(&t); *al=tm->w_day;}
+	     CASE 0x4C: exit(*al);
              }}}
 
 T struct rm{U mod,reg,r_m;}rm;      // the three fields of the mod-reg-r/m byte
@@ -69,25 +82,28 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
                    CASE 2: x+=(I)(S)fetchw();
                    CASE 3: R decreg(r.r_m,w); }
     R (U)(mem+x); }
+U decseg(U sr){         // decode segment register
+  R (U)((US*[]){es,cs,ss,ds}[sr&3]);
+}
 
 // opcode helpers
     // set d and w from o
-#define DW  if(trace){ P("%s:\n",__func__); } \
+#define DW  if(trace){ P("%s: ",__func__); } \
             d=!!(o&2); \
             w=o&1;
     // fetch mrm byte and decode, setting x and y as pointers to args and p ptr to dest
 #define RMP rm r=mrm(fetchb());\
             x=decreg(r.reg,w); \
             y=decrm(r,w); \
-            if(trace>1){ P("x:%d\n",x); P("y:%d\n",y); } \
+            if(trace>1){ P("x:%d ",x); P("y:%d ",y); } \
             p=d?(void*)x:(void*)y; \
-            if(trace>1){ P("p:%d\n",(U)p); }
+            if(trace>1){ P("p:%d ",(U)p); }
 
     // fetch x and y values from x and y pointers
 #define LDXY \
             x=get_((void*)x,w); \
             y=get_((void*)y,w); \
-            if(trace){ P("x:%d\n",x); P("y:%d\n",y); }
+            if(trace){ P("x:%d ",x); P("y:%d ",y); }
 
     // normal mrm decode and load
 #define RM  RMP LDXY
@@ -112,6 +128,13 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
                        | ( ((z^x)&(z^y)&(w?0x8000:0x80)) ?OF:0) \
                        | ( ((x^y^z)&0x10)                ?AF:0); \
                        SETPF
+
+#define MULFLAGS  *fl &= ~(CF|OF); \
+                  *fl |= (w?*dx:*ah)?CF|OF:0;
+
+#define IMULFLAGS *fl &= ~(CF|OF); \
+                  *fl |= (w?*ax&0x8000&&*dx==0xffff||!(*ax&0x8000)&&!*dx \
+                           :*ah&0x80&&*ah=0xff||!(*ah&0x80)&&!*ah)?CF|OF:0;
 
     // store result to p ptr
 #define RESULT \
@@ -155,7 +178,7 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
             b \
             d=0; \
             y=get_((void*)y,w); \
-            if(trace){ P("x:%d\n",x); P("y:%d\n",y); } \
+            if(trace){ P("x:%d ",x); P("y:%d ",y); } \
             if(trace){ \
                 P("%s ", \
                   (C*[]){"ADD","OR","ADC","SBB","AND","SUB","XOR","CMP"}[r.reg]); } \
@@ -171,14 +194,17 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
 #define TEST z=x&y; LOGFLAGS MATHFLAGS
 #define XCHG f=x;z=y; LDXY if(w){*(US*)f=y;*(US*)z=x;}else{*(UC*)f=y;*(UC*)z=x;}
 #define MOV z=d?y:x; RESULT
-#define MOVSEG
+#define MOVSEG rm r=mrm(fetchb()); \
+               x=decseg(r.reg); \
+               y=decrm(r,w); \
+               z=*(US*)(d?x:y)=*(US*)(d?y:x);
 #define LEA RMP z=((UC*)y)-mem; p=(void*)x; RESULT
 #define NOP (void)0;
 #define AXCH(r) x=(U)ax; y=(U)(r); w=1; XCHG
 #define CBW *ax=(S)(C)*al;
 #define CWD z=(I)(S)*ax; *dx=z>>16;
 #define CALL x=w?fetchw():(S)(C)fetchb(); PUSH(ip); (*ip)+=(S)x;
-#define FARCALL
+#define FARCALL PUSH(cs); PUSH(ip);
 #define WAIT
 #define PUSHF PUSH(fl)
 #define POPF POP(fl)
@@ -193,16 +219,35 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
 #define LODS if(w) *ax=get_(mem+*si,w); else *al=get_(mem+*si,w); *si+=Offset;
 #define SCAS z=(x=w?*ax:*al)-(y=get_(di,w)); LOGFLAGS MATHFLAGS *di+=Offset;
 #define iMOVb(r) (*r)=fetchb();
-#define iMOVw(r) if(trace>1)P("r:%d\n",(U)r); (*r)=fetchw();
+#define iMOVw(r) if(trace>1)P("r:%d ",(U)r); (*r)=fetchw();
 #define RET(v) POP(ip); if(v)*sp+=v*2;
 #define LES
 #define LDS
 #define iMOVm if(w){iMOVw((US*)y)}else{iMOVb((UC*)y)}
 #define fRET(v) POP(cs); RET(v)
 #define INT(v) interrupt(v);
-#define INT0
+#define INT0   //div by zero trap
 #define IRET
-#define Shift rm r=mrm(fetchb());
+#define Shift rm r=mrm(fetchb()); \
+              y=decrm(r,w); \
+	      if (trace)P("%s ", (C*[]){"ROL","ROR","RCL","RCR","SHL","SHR","SAR"}[r.reg]); \
+              switch(r.reg){ \
+	      CASE 0: ROL ; \
+              CASE 1: ROR ; \
+	      CASE 2: RCL ; \
+              CASE 3: RCR ; \
+	      CASE 4: SHL ; \
+	      CASE 5: SHR ; \
+              CASE 7: SAR ; \
+              }
+#define ROL
+#define ROR
+#define RCL
+#define RCR
+#define SHL p=(void*)y; z=y<<1; RESULT
+#define SHR p=(void*)y; z=y>>1; RESULT
+#define SAR p=(void*)y; z=(S)y>>1; RESULT
+#define ShiftCL rm r=mrm(fetchb());
 #define XLAT
 #define ESC(v)
 #define LOOPNZ
@@ -219,18 +264,28 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
 #define LOCK
 #define REP
 #define REPZ
-#define HLT halt=1
+#define HLT if(trace)P("HALT\n"); halt=1
 #define CMC *fl=(*fl^CF);
-#define NOT
-#define NEG
-#define MUL
-#define IMUL
-#define DIV
-#define IDIV
+#define NOT  z=~y; RESULT
+#define NEG  z=w?-(S)y:-(C)y; RESULT
+#define MUL  if(w){z=*ax*y; *ax=z; *dx=z>>16;} \
+             else{z=*al*y; *ax=z;} MULFLAGS
+#define IMUL if(w){z=(I)*ax*(I)y; *ax=z; *dx=z>>16;} \
+             else{z=(I)*al*(I)y; *ax=z;} IMULFLAGS
+#define DIV  if(!y){INT0 return;} \
+             if(w){d=*dx<<16|*ax; z=d/y; f=d%y; *ax=z; *dx=f;} \
+             else{z=*ax/y; f=*ax%y; *al=z; *ah=f;} \
+             if(z>w?0xffff:0xff){INT0 return;}
+#define IDIV if(!y){INT0 return;} \
+             if(w){d=*dx<<16|*ax; z=(I)d/(S)y; f=(I)d%(S)y; *ax=z; *dx=f;} \
+             else{z=(S)*ax/(UC)y; f=(S)*ax%(UC)y; *al=z; *ah=f;} \
+             if((I)z>w?0x7fff:0x7f || (I)z<w?-0x7fff:-0x7f){INT0 return;}
 #define Grp1 rm r=mrm(fetchb()); \
              y=decrm(r,w); \
+	     p=(V*)y; \
+             y=get_((void*)y,w); \
              if(trace)P("%s ", (C*[]){}[r.reg]); \
-             switch(r.reg){CASE 0: TEST; \
+             switch(r.reg){CASE 0: x=w?fetchw():fetchb(); TEST; \
                            CASE 2: NOT; \
                            CASE 3: NEG; \
                            CASE 4: MUL; \
@@ -239,7 +294,7 @@ U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
                            CASE 7: IDIV; }
 #define Grp2 rm r=mrm(fetchb()); \
              y=decrm(r,w); \
-             if(trace)P("%s ", (C*[]){"INC","DEC","CALL","CALL","JMP","JMP","PUSH"}[r.reg]); \
+             if(trace)P("%s ",(C*[]){"INC","DEC","CALL","CALL","JMP","JMP","PUSH"}[r.reg]); \
              switch(r.reg){CASE 0: INC((S*)y); \
                            CASE 1: DEC((S*)y); \
                            CASE 2: CALL; \
@@ -296,7 +351,7 @@ _(jl, J(sf^of))       _(jnl_, JN(sf^of))     _(jle, J((sf^of)|zf)) _(jnle,JN((sf
 _(immb, IMM(,))       _(immw, IMM(,))        _(immb1, IMM(,))      _(immis, IMMIS)      /*80-83*/\
 _(testb, RM TEST)     _(testw, RM TEST)      _(xchgb, RMP XCHG)    _(xchgw, RMP XCHG)   /*84-87*/\
 _(movbf, RM MOV)      _(movwf, RM MOV)       _(movbt, RM MOV)      _(movwt, RM MOV)     /*88-8b*/\
-_(movsegf, RM MOVSEG) _(lea, LEA)          _(movsegt, RM MOVSEG) _(poprm,RM POP((US*)p))/*8c-8f*/\
+_(movsegf, MOVSEG)    _(lea, LEA)            _(movsegt, MOVSEG)  _(poprm,RM POP((US*)p))/*8c-8f*/\
 _(nopH, NOP)          _(xchgac, AXCH(cx))    _(xchgad, AXCH(dx))   _(xchgab, AXCH(bx))  /*90-93*/\
 _(xchgasp, AXCH(sp))  _(xchabp, AXCH(bp))    _(xchgasi, AXCH(si))  _(xchadi, AXCH(di))  /*94-97*/\
 _(cbw, CBW)           _(cwd, CWD)            _(farcall, FARCALL)   _(wait, WAIT)        /*98-9b*/\
@@ -314,7 +369,7 @@ _(nopI, NOP)          _(nopJ, NOP)           _(reti, RET(fetchw())) _(retz, RET(
 _(les, LES)           _(lds, LDS)            _(movimb, RMP iMOVm)  _(movimw, RMP iMOVm) /*c4-c7*/\
 _(nopK, NOP)          _(nopL, NOP)           _(freti, fRET(fetchw())) _(fretz, fRET(0)) /*c8-cb*/\
 _(int3, INT(3))       _(inti, INT(fetchb())) _(int0, INT(0))       _(iret, IRET)        /*cc-cf*/\
-_(shiftb, Shift)      _(shiftw, Shift)       _(shiftbv, Shift)     _(shiftwv, Shift)    /*d0-d3*/\
+_(shiftb, Shift)      _(shiftw, Shift)       _(shiftbv, ShiftCL)   _(shiftwv, ShiftCL)  /*d0-d3*/\
 _(aam, AAM)           _(aad, AAD)            _(nopM, NOP)          _(xlat, XLAT)        /*d4-d7*/\
 _(esc0, ESC(0))       _(esc1, ESC(1))        _(esc2, ESC(2))       _(esc3, ESC(3))      /*d8-db*/\
 _(esc4, ESC(4))       _(esc5, ESC(5))        _(esc6, ESC(6))       _(esc7, ESC(7))      /*dc-df*/\
@@ -381,3 +436,4 @@ I main(I c,C**v){
     else run();         // otherwise, just run
     //video();            // dump final video
     return 0;}
+

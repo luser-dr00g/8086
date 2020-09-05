@@ -1,6 +1,6 @@
 typedef unsigned char UC;
 typedef unsigned short US;
-enum { MAX_NAME = 8, MAX_CODE_PARAM = 20, MAX_WORD_PARAM = 20 };
+enum { MAX_NAME = 9, MAX_CODE_PARAM = 20, MAX_WORD_PARAM = 30 };
 
 struct code_entry {
   US link;
@@ -36,6 +36,7 @@ struct word_entry {
       .param    = { __VA_ARGS__ , NEXT }		\
     };							\
     memcpy( p, &x, sizeof x ); 				\
+    if(trace)printf("%s:%x ", #e, c_ ## e);		\
     p += sizeof x; 					\
   } 							\
 /*end CODE()*/
@@ -53,6 +54,7 @@ struct word_entry {
       .param    = { __VA_ARGS__ , NEXT }		\
     };							\
     memcpy( p, &x, sizeof x );				\
+    if(trace)printf("%s:%x ", #e, c_ ## e);		\
     p += sizeof x;					\
   }
 /*end HEADLESS()*/
@@ -70,6 +72,7 @@ struct word_entry {
       .param    = { __VA_ARGS__ , c_exit } 		\
     }; 							\
     memcpy( p, &x, sizeof x ); 				\
+    if(trace)printf("%s:%x ", #e, c_ ## e);		\
     p += sizeof x; 					\
   } 							\
 /*end WORD()*/

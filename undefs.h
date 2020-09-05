@@ -1,7 +1,10 @@
+#undef ADD
+#undef  OR
+#undef CMP
+#undef SBB
+#undef SUB
 #undef LEA
 #undef MOV
-#undef ADD
-#undef SUB
 #undef     F
 #undef    MRM
 #undef        Z
@@ -33,6 +36,8 @@
 #undef PUSH
 #undef ADDAX
 #undef LODS
+#undef LAHF
+#undef NOT
 #undef JZ
 #undef HALT
 #undef INT
