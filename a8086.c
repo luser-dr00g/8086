@@ -4,6 +4,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<sys/stat.h>
+#include<sys/time.h>
 #include<time.h>
 #include<unistd.h>
 #define P printf
@@ -14,7 +15,7 @@
 T intptr_t I; T uintptr_t U;
 T short S; T unsigned short US;
 T signed char C; T unsigned char UC; T void V;  // to make everything shorter
-U o,w,d,f; // opcode, width, direction, extra temp variable (was initially for a flag, hence 'f')
+U o,w,d,f; // opcode, width, direction, extra temp variable (was for a flag, hence f)
 U x,y,z;   // left operand, right operand, result
 void *p;   // location to receive result
 UC halt,debug=0,trace=0,reg[28],null[2],mem[0x100000]={ // operating flags, register memory, RAM
@@ -58,14 +59,25 @@ V put_(void*p,U x,U w){ if(w){ *(UC*)p=x; ((UC*)p)[1]=x>>8; }else *(UC*)p=x; }
 UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); ++*ip; if(trace)P("%02x(%03o) ",x,x); R x; }
 US fetchw(){I w=fetchb();R w|(fetchb()<<8);}
 
+
 void interrupt( UC no ){
   switch(no){
   CASE 0x00: printf("div by zero trap\n");
   CASE 0x21: switch(*ah){
              CASE 0x01: *al = getchar();
              CASE 0x02: putchar(*al=*dl); if(*al=='\t')*al=' ';
-	     CASE 0x09: f=*dx; while(mem[f]!='$')putchar(mem[f++]);
-	     CASE 0x2A: {time_t t=time(NULL);struct tm*tm=localtime(&t);*al=tm->tm_wday;}
+	     CASE 0x09: f=*dx; while(mem[f]!='$')putchar(mem[f++]); *al='$';
+	     CASE 0x2A: {time_t t=time(NULL);struct tm*tm=localtime(&t);
+	                 *cx=tm->tm_year;
+                         *dh=tm->tm_mon;
+                         *dl=tm->tm_mday;
+                         *al=tm->tm_wday;}
+	     CASE 0x2C: {struct timeval tv;gettimeofday(&tv,0);
+                         time_t t=time(NULL);struct tm*tm=localtime(&t);
+                         *ch=tm->tm_hour;
+                         *cl=tm->tm_min;
+                         *dh=tm->tm_sec;
+                         *dl=tv.tv_usec/10;}
 	     CASE 0x4C: exit(*al);
              }}}
 
