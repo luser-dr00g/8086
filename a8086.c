@@ -65,7 +65,7 @@ void interrupt( UC no ){
              CASE 0x01: *al = getchar();
              CASE 0x02: putchar(*al=*dl); if(*al=='\t')*al=' ';
 	     CASE 0x09: f=*dx; while(mem[f]!='$')putchar(mem[f++]);
-	     CASE 0x2A: {time_t t=time(NULL); struct tm *tm = localtime(&t); *al=tm->w_day;}
+	     CASE 0x2A: {time_t t=time(NULL);struct tm*tm=localtime(&t);*al=tm->tm_wday;}
 	     CASE 0x4C: exit(*al);
              }}}
 
@@ -134,7 +134,7 @@ U decseg(U sr){         // decode segment register
 
 #define IMULFLAGS *fl &= ~(CF|OF); \
                   *fl |= (w?*ax&0x8000&&*dx==0xffff||!(*ax&0x8000)&&!*dx \
-                           :*ah&0x80&&*ah=0xff||!(*ah&0x80)&&!*ah)?CF|OF:0;
+                           :*ah&0x80&&*ah==0xff||!(*ah&0x80)&&!*ah)?CF|OF:0;
 
     // store result to p ptr
 #define RESULT \
