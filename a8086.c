@@ -59,7 +59,6 @@ V put_(void*p,U x,U w){ if(w){ *(UC*)p=x; ((UC*)p)[1]=x>>8; }else *(UC*)p=x; }
 UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); ++*ip; if(trace)P("%02x(%03o) ",x,x); R x; }
 US fetchw(){I w=fetchb();R w|(fetchb()<<8);}
 
-
 void interrupt( UC no ){
   switch(no){
   CASE 0x00: printf("div by zero trap\n");
