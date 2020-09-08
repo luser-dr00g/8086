@@ -1,8 +1,10 @@
 #include "undefs.h"
 #define ADD(to,m,r,r_m) to+0x03,MRM(m,r,r_m)
+#define AND(to,m,r,r_m) to+0x23,MRM(m,r,r_m)
 #define  OR(to,m,r,r_m) to+0x0b,MRM(m,r,r_m)
 #define SBB(to,m,r,r_m) to+0x1b,MRM(m,r,r_m)
 #define SUB(to,m,r,r_m) to+0x2b,MRM(m,r,r_m)
+#define XOR(to,m,r,r_m) to+0x33,MRM(m,r,r_m)
 #define CMP(to,m,r,r_m) to+0x3b,MRM(m,r,r_m)
 #define MOV(to,m,r,r_m) to+0x8b,MRM(m,r,r_m)
 #define LEA(to,m,r,r_m) to+0x8d,MRM(m,r,r_m)
@@ -30,14 +32,17 @@
 #define            BX_   7
 #define TEST(m,r,r_m) 0x85,MRM(m,r,r_m)
 #define IMUL(m,  r_m) 0xf7,MRM(m,5,r_m)
+#define IDIV(m,  r_m) 0xf7,MRM(m,7,r_m)
 #define INC_(m,  r_m) 0xff,MRM(m,0,r_m)
 #define DEC_(m,  r_m) 0xff,MRM(m,1,r_m)
 #define JMP_(m,  r_m) 0xff,MRM(m,5,r_m)
+#define SHL(m,   r_m) 0xd1,MRM(m,4,r_m) 
 #define POP(r)    0x58+r
 #define PUSH(r)   0x50+r
 #define ADDAX     0x05
 #define LODS      0xAD
 #define JZ        0x74
+#define JNZ       0x75
 #define JS        0x78
 #define JNS       0x79
 #define JL        0x7C
@@ -48,6 +53,7 @@
 #define HALT      0xF4
 #define SHRC(m,r) 0xD3,MRM(m,5,r)
 #define NOT(m, r) 0xF7,MRM(m,2,r)
+#define NEG(m, r) 0xF7,MRM(m,3,r)
 #define INT(no)   0xCD,0x##no
 #define MOVAXI(a,b) 0xB8,a,b
 #define MOVCXI(a,b) 0xB9,a,b

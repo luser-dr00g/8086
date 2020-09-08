@@ -241,6 +241,8 @@ U decseg(U sr){         // decode segment register
 #define IRET
 #define Shift rm r=mrm(fetchb()); \
               y=decrm(r,w); \
+	      p=(void*)y; \
+              y=get_((void*)y,w); \
 	      if (trace)P("%s ", (C*[]){"ROL","ROR","RCL","RCR","SHL","SHR","SAR"}[r.reg]); \
               switch(r.reg){ \
 	      CASE 0: ROL ; \
@@ -255,9 +257,9 @@ U decseg(U sr){         // decode segment register
 #define ROR
 #define RCL
 #define RCR
-#define SHL p=(void*)y; z=y<<1; RESULT
-#define SHR p=(void*)y; z=y>>1; RESULT
-#define SAR p=(void*)y; z=(S)y>>1; RESULT
+#define SHL z=y<<1; RESULT
+#define SHR z=y>>1; RESULT
+#define SAR z=(S)y>>1; RESULT
 #define ShiftCL rm r=mrm(fetchb());
 #define XLAT
 #define ESC(v)
@@ -295,7 +297,7 @@ U decseg(U sr){         // decode segment register
              y=decrm(r,w); \
 	     p=(V*)y; \
              y=get_((void*)y,w); \
-             if(trace)P("%s ", (C*[]){}[r.reg]); \
+             if(trace)P("%s ",(C*[]){"TEST","NOP","NOT","NEG","MUL","IMUL","DIV","IDIV"}[r.reg]); \
              switch(r.reg){CASE 0: x=w?fetchw():fetchb(); TEST; \
                            CASE 2: NOT; \
                            CASE 3: NEG; \
@@ -305,7 +307,7 @@ U decseg(U sr){         // decode segment register
                            CASE 7: IDIV; }
 #define Grp2 rm r=mrm(fetchb()); \
              y=decrm(r,w); \
-             if(trace)P("%s ",(C*[]){"INC","DEC","CALL","CALL","JMP","JMP","PUSH"}[r.reg]); \
+             if(trace)P("%s ",(C*[]){"INC","DEC","CALL","CALL","JMP","JMP","PUSH","NOP"}[r.reg]); \
              switch(r.reg){CASE 0: INC((S*)y); \
                            CASE 1: DEC((S*)y); \
                            CASE 2: CALL; \
@@ -447,4 +449,3 @@ I main(I c,C**v){
     else run();         // otherwise, just run
     //video();            // dump final video
     return 0;}
-

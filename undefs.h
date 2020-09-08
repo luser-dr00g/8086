@@ -1,5 +1,7 @@
 #undef ADD
+#undef AND
 #undef  OR
+#undef XOR
 #undef CMP
 #undef SBB
 #undef SUB
@@ -29,15 +31,18 @@
 #undef            BX_
 #undef TEST
 #undef IMUL
+#undef IDIV
 #undef INC_
 #undef DEC_
 #undef JMP_
+#undef SHL
 #undef POP
 #undef PUSH
 #undef ADDAX
 #undef LODS
 #undef LAHF
 #undef NOT
+#undef NEG
 #undef JZ
 #undef HALT
 #undef INT
