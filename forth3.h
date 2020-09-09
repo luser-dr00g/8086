@@ -13,14 +13,13 @@ static inline int
 forth(char *start){
 char *p = start;
 { UC x[] = { HALT, 00, 00 }; memcpy( p, x, sizeof x ); p += 16; } 
-HEADLESS(enter,  enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
+HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
 CODE(exit,  exit,      POPRSP(SI))
 CODE(emit,  emit,      POP(DX), MOVAXI(00,02), INT(21))
 CODE(key,   key,       MOVAXI(00,01), INT(21), PUSH(AX))
 CODE(0branch,zbranch,  POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JNZ,2, ADD(,R,SI,AX))
 CODE(branch,branch,    LODS, SHL(R,AX), ADD(,R,SI,AX))
 CODE(lit,   lit,       LODS, PUSH(AX))
-//CODE(dup,   dup,       MOV(,R,BX,SP), MOV(,B,AX,BX_),0, PUSH(AX))
 CODE(dup,   dup,       POP(AX), PUSH(AX), PUSH(AX))
 CODE(drop,  drop,      POP(AX))
 CODE(swap,  swap,      POP(AX), POP(BX), PUSH(AX), PUSH(BX))
@@ -58,26 +57,29 @@ CODE(!,     bang,      POP(BX), POP(AX), MOV(F,Z,AX,BX_))
 CODE(@,     at,        POP(BX), MOV(,Z,AX,BX_), PUSH(AX))
 CODE(+!,    plusbang,  POP(BX), POP(AX), ADD(F,Z,AX,BX_))
 CODE(-!,    minusbang, POP(BX), POP(AX), SUB(F,Z,AX,BX_))
+CODE(type,  type,      POP(CX), POP(BX), MOVAXI(00,02), 
+                       -1+MOV(,Z,DX,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ,-10)
 CODE(bye,   bye,       HALT)
 WORD(0,     zero,      c_lit, 0)
 WORD(1,     one,       c_lit, 1)
 WORD(10,    ten,       c_lit, 10)
-WORD(double, double,   c_dup, c_add)
-WORD(dubdub, dubdub,   c_double, c_double)
 WORD(cr,    cr,        c_lit,'\n', c_emit)
 WORD(space, space,     c_lit,' ', c_emit)
 WORD(.,     dot,       c_dup, c_zless, c_zbranch, 4, c_lit, '-', c_emit, c_minus,
                        c_ten, c_divmod, c_swap, c_lit, '0', c_add, c_emit,
                        c_dup, c_zeq, c_zbranch, -11, c_space)
 WORD(ok,    ok,        c_lit,'O',c_emit, c_lit,'K',c_emit, c_cr)
-WORD(run,   run,       c_lit,0, c_zeq, c_dot,
+WORD(test,  test,      c_lit,0, c_zeq, c_dot,
                        c_lit,2, c_zeq, c_dot,
                        c_lit,12,            c_zless, c_dot,
                        c_lit,1+(0xffff^50), c_zless, c_dot,
                        c_lit,12,            c_zmore, c_dot,
                        c_lit,1+(0xffff^50), c_zmore, c_dot,
                        c_ok, c_bye)
-US init = c_run + 2;
+WORD(here,  here,      c_lit, 0)
+WORD(allot, allot,     c_lit, c_here+4, c_swap, c_over, c_at, c_plusbang)
+memcpy( start+c_here+4, (US[]){ p-start }, 2);
+US init = c_test + 2;
 { UC x[] = { MOVBPI( 0x00,0x20 ), MOVSII(init%0x100,init/0x100), NEXT };
 memcpy( start, x, sizeof x ); }
 return  0;}

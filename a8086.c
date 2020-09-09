@@ -87,7 +87,8 @@ U decreg(U reg,U w){    // decode the reg field, yielding a uintptr_t to the reg
     else R (U)((UC*[]){al,cl,dl,bl,ah,ch,dh,bh}[reg]); }
 U rs(US*x,US*y){ R get_(x,1)+get_(y,1); }  // fetch and sum two full-words
 U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
-    U x=(U[]){rs(bx,si),rs(bx,di),rs(bp,si),rs(bp,di),get_(si,1),get_(di,1),get_(bp,1),get_(bx,1)}[r.r_m];
+    U x=(U[]){rs(bx,si),rs(bx,di),rs(bp,si),rs(bp,di),
+              get_(si,1),get_(di,1),get_(bp,1),get_(bx,1)}[r.r_m];
     switch(r.mod){ CASE 0: if (r.r_m==6) R (U)(mem+fetchw());
                    CASE 1: x+=(I)(C)fetchb();
                    CASE 2: x+=(I)(S)fetchw();
