@@ -9,6 +9,8 @@
 #define POPRSP(r)  	MOV(,B,r,BP_),0, LEA(,B,BP,BP_),4
 #define minus(x)	1+(0xff^x)
 
+static inline void nop_(){}
+
 static inline int
 forth(char *start){
 char *p = start;
@@ -69,16 +71,20 @@ WORD(.,     dot,       c_dup, c_zless, c_zbranch, 4, c_lit, '-', c_emit, c_minus
                        c_ten, c_divmod, c_swap, c_lit, '0', c_add, c_emit,
                        c_dup, c_zeq, c_zbranch, -11, c_space)
 WORD(ok,    ok,        c_lit,'O',c_emit, c_lit,'K',c_emit, c_cr)
-WORD(test,  test,      c_lit,0, c_zeq, c_dot,
+WORD(here,  here,      c_lit, 0)
+WORD(allot, allot,     c_lit, c_here+4, c_plusbang)
+WORD(test1, test1,     c_lit,0, c_zeq, c_dot,
                        c_lit,2, c_zeq, c_dot,
                        c_lit,12,            c_zless, c_dot,
                        c_lit,1+(0xffff^50), c_zless, c_dot,
                        c_lit,12,            c_zmore, c_dot,
-                       c_lit,1+(0xffff^50), c_zmore, c_dot,
-                       c_ok, c_bye)
-WORD(here,  here,      c_lit, 0)
-WORD(allot, allot,     c_lit, c_here+4, c_swap, c_over, c_at, c_plusbang)
+                       c_lit,1+(0xffff^50), c_zmore, c_dot, c_ok)
+WORD(test2, test2,     c_here, c_lit, 12, c_allot, 
+                       c_lit, 12, c_type, c_ok)
+WORD(test,  test,      c_test1, c_cr, c_test2, c_cr, c_bye)
 memcpy( start+c_here+4, (US[]){ p-start }, 2);
+memcpy( p, "Hello world!", 12 );
+nop_();
 US init = c_test + 2;
 { UC x[] = { MOVBPI( 0x00,0x20 ), MOVSII(init%0x100,init/0x100), NEXT };
 memcpy( start, x, sizeof x ); }
