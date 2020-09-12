@@ -15,7 +15,9 @@ static inline int
 forth(char *start){
 char *p = start;
 trace=0;
-{ UC x[] = { HALT, 00, 00 }; memcpy( p, x, sizeof x ); p += 16; } 
+{ UC x[] = { HALT, 00, 00 };
+  memcpy( p, x, sizeof x );
+  p += 64; } //boot code and return stack area. stack pointer assumed well out of the way
 HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
 HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dovar, dovar, MOV(,R,BX,AX), LEA(,B,AX,BX_),2, PUSH(AX))
@@ -79,7 +81,8 @@ WORD(.neg,  dotneg,    c_enter, c_dup, c_zless, c_zbranch, 4, c_lit, '-', c_emit
 WORD(.emit, dotemit,   c_enter, c_lit, '0', c_add, c_emit)
 WORD(.expand,dotexpand,c_enter, c_ten, c_divmod, c_one, c_digits, c_plusbang,
                                 c_dup, c_zeq, c_zbranch, -9)
-WORD(.digits,dotdigits,c_enter, c_drop, c_dotemit, c_one, c_digits, c_minusbang, 
+WORD(.digits,dotdigits,c_enter, c_drop,
+                                c_dotemit, c_one, c_digits, c_minusbang, 
                                 c_digits, c_at, c_zeq, c_zbranch, -9)
 WORD(.,     dot,       c_enter, c_dotstart,
                                 c_dotneg, 
@@ -104,8 +107,6 @@ WORD(test3, test3,     c_enter, c_here, c_lit, 12, c_allot,
                                 c_lit, 12, c_type, c_ok)
 WORD(test4, test4,     c_enter, c_x, c_dot, c_x, c_at, c_dot, c_ok)
 WORD(test5, test5,     c_enter, c_ten, c_x, c_bang, c_x, c_at, c_dot, c_ok)
-//printf( "%s:%d", "dovar", c_dovar );
-//printf( "%s:%d", "test4", c_test4 );
 WORD(test,  test,      c_enter, c_test0, c_cr,
                                 c_test1, c_cr,
                                 c_test2, c_cr,
@@ -118,7 +119,7 @@ memcpy( p, "Hello world!", 12 );
 nop_();
 US init = c_test + 2;
 { UC x[] = { MOVBPI( 0x00,0x20 ), MOVSII(init%0x100,init/0x100), NEXT };
-memcpy( start, x, sizeof x ); }
+  memcpy( start, x, sizeof x ); }
 trace=0;
 return  0;}
 

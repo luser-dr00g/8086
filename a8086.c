@@ -445,7 +445,7 @@ I main(I c,C**v){
     if(c>1){            // if there's an argument
         load(v[1]);     //     load named file
     }else forth(mem);
-    *sp=0x1000;          // initialize stack pointer
+    *sp=0xF000;          // initialize stack pointer
     if(debug) dbg();    // if debugging, debug
     else run();         // otherwise, just run
     //video();            // dump final video
