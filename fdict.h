@@ -36,7 +36,7 @@ struct word_entry {
       .param    = { __VA_ARGS__ , NEXT }		\
     };							\
     memcpy( p, &x, sizeof x ); 				\
-    if(trace)printf("%s:%x ", #e, c_ ## e);		\
+    if(trace)printf("%s:%d ", #e, c_ ## e);		\
     p += sizeof x; 					\
   } 							\
 /*end CODE()*/
@@ -54,27 +54,27 @@ struct word_entry {
       .param    = { __VA_ARGS__ , NEXT }		\
     };							\
     memcpy( p, &x, sizeof x );				\
-    if(trace)printf("%s:%x ", #e, c_ ## e);		\
+    if(trace)printf("%s:%d ", #e, c_ ## e);		\
     p += sizeof x;					\
   }
 /*end HEADLESS()*/
 
 #define P_HEADLESS_PTR ( p - start ) + offsetof( struct headless_entry, param )
 
-#define WORD(n, e, ...) 				\
-  const US  c_ ## e  = P_WORD_PTR;			\
-  {							\
-    struct word_entry x = { 				\
-      .link     = - (int)sizeof x, 			\
-      .name_len = sizeof(  # n  ) - 1, 			\
-      .name     = # n ,					\
-      .code     = c_enter, 				\
-      .param    = { __VA_ARGS__ , c_exit } 		\
-    }; 							\
-    memcpy( p, &x, sizeof x ); 				\
-    if(trace)printf("%s:%x ", #e, c_ ## e);		\
-    p += sizeof x; 					\
-  } 							\
+#define WORD(namestring, cname, codeword, ...) 			\
+  const US  c_ ## cname  = P_WORD_PTR;				\
+  {								\
+    struct word_entry x = { 					\
+      .link     = - (int)sizeof x, 				\
+      .name_len = sizeof(  # namestring  ) - 1, 		\
+      .name     = # namestring ,				\
+      .code     = codeword ,	 				\
+      .param    = { __VA_ARGS__ , c_exit } 			\
+    }; 								\
+    memcpy( p, &x, sizeof x ); 					\
+    if(trace)printf("%s:%d ", #cname, c_ ## cname);		\
+    p += sizeof x; 						\
+  } 								\
 /*end WORD()*/
 
 #define P_WORD_PTR ( p - start ) + offsetof( struct word_entry, code )

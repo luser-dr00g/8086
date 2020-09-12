@@ -14,8 +14,17 @@ static inline void nop_(){}
 static inline int
 forth(char *start){
 char *p = start;
+trace=1;
 { UC x[] = { HALT, 00, 00 }; memcpy( p, x, sizeof x ); p += 16; } 
 HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
+HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
+HEADLESS(dovar, dovar, //MOV(,R,BX,AX), LEA(,B,AX,BX_),0, 
+                       //ADDAX,2,0, 
+	               //MOV(,R,AX,BX),
+	               //INC_(R,AX), //INC_(R,AX), 
+	               MOV(,R,BX,AX), LEA(,B,AX,BX_),2,
+                       PUSH(AX))
+	               //PUSH(SI))
 CODE(exit,  exit,      POPRSP(SI))
 CODE(emit,  emit,      POP(DX), MOVAXI(00,02), INT(21))
 CODE(key,   key,       MOVAXI(00,01), INT(21), PUSH(AX))
@@ -60,33 +69,48 @@ CODE(@,     at,        POP(BX), MOV(,Z,AX,BX_), PUSH(AX))
 CODE(+!,    plusbang,  POP(BX), POP(AX), ADD(F,Z,AX,BX_))
 CODE(-!,    minusbang, POP(BX), POP(AX), SUB(F,Z,AX,BX_))
 CODE(type,  type,      POP(CX), POP(BX), MOVAXI(00,02), 
-                       -1+MOV(,Z,DX,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ,-10)
+                       BYTE+MOV(,Z,DL,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ,-10)
 CODE(bye,   bye,       HALT)
-WORD(0,     zero,      c_lit, 0)
-WORD(1,     one,       c_lit, 1)
-WORD(10,    ten,       c_lit, 10)
-WORD(cr,    cr,        c_lit,'\n', c_emit)
-WORD(space, space,     c_lit,' ', c_emit)
-WORD(.,     dot,       c_dup, c_zless, c_zbranch, 4, c_lit, '-', c_emit, c_minus,
-                       c_ten, c_divmod, c_swap, c_lit, '0', c_add, c_emit,
-                       c_dup, c_zeq, c_zbranch, -11, c_space)
-WORD(ok,    ok,        c_lit,'O',c_emit, c_lit,'K',c_emit, c_cr)
-WORD(here,  here,      c_lit, 0)
-WORD(allot, allot,     c_lit, c_here+4, c_plusbang)
-WORD(test1, test1,     c_lit,0, c_zeq, c_dot,
-                       c_lit,2, c_zeq, c_dot,
-                       c_lit,12,            c_zless, c_dot,
-                       c_lit,1+(0xffff^50), c_zless, c_dot,
-                       c_lit,12,            c_zmore, c_dot,
-                       c_lit,1+(0xffff^50), c_zmore, c_dot, c_ok)
-WORD(test2, test2,     c_here, c_lit, 12, c_allot, 
-                       c_lit, 12, c_type, c_ok)
-WORD(test,  test,      c_test1, c_cr, c_test2, c_cr, c_bye)
+//WORD(0,     zero,      c_enter, c_lit, 0)
+//WORD(1,     one,       c_enter, c_lit, 1)
+WORD(0,     zero,      c_docon, 0)
+WORD(1,     one,       c_docon, 1)
+WORD(x,     x,         c_dovar, 5)
+WORD(10,    ten,       c_enter, c_lit, 10)
+WORD(cr,    cr,        c_enter, c_lit,'\n', c_emit)
+WORD(space, space,     c_enter, c_lit,' ', c_emit)
+WORD(.,     dot,       c_enter, c_dup, c_zless, c_zbranch, 4, c_lit, '-', c_emit, c_minus,
+                                c_ten, c_divmod, c_swap, c_lit, '0', c_add, c_emit,
+                                c_dup, c_zeq, c_zbranch, -11, c_space)
+WORD(ok,    ok,        c_enter, c_lit,'O',c_emit, c_lit,'K',c_emit, c_cr)
+WORD(here,  here,      c_enter, c_lit, 0)
+WORD(allot, allot,     c_enter, c_lit, c_here+4, c_plusbang)
+WORD(test0, test0,     c_enter, c_zero, c_dot,
+                                c_one, c_dot, c_ok)
+WORD(test1, test1,     c_enter, c_zero, c_zeq, c_dot,
+                                c_one, c_zeq, c_dot, c_ok)
+WORD(test2, test2,     c_enter, c_lit,12,            c_zless, c_dot,
+                                c_lit,1+(0xffff^50), c_zless, c_dot,
+                                c_lit,12,            c_zmore, c_dot,
+                                c_lit,1+(0xffff^50), c_zmore, c_dot, c_ok)
+WORD(test3, test3,     c_enter, c_here, c_lit, 12, c_allot, 
+                                c_lit, 12, c_type, c_ok)
+WORD(test4, test4,     c_enter, c_x, c_dot, c_x, c_at, c_dot, c_ok)
+//c_ten, c_x, c_bang, c_x, c_at, c_dot, c_ok)
+printf( "%s:%d", "dovar", c_dovar );
+printf( "%s:%d", "test4", c_test4 );
+WORD(test,  test,      c_enter, c_test0, c_cr,
+                                c_test1, c_cr,
+                                c_test2, c_cr,
+                                c_test3, c_cr,
+                                c_test4, c_cr,
+                                c_bye)
 memcpy( start+c_here+4, (US[]){ p-start }, 2);
 memcpy( p, "Hello world!", 12 );
 nop_();
 US init = c_test + 2;
 { UC x[] = { MOVBPI( 0x00,0x20 ), MOVSII(init%0x100,init/0x100), NEXT };
 memcpy( start, x, sizeof x ); }
+trace=0;
 return  0;}
 
