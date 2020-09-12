@@ -14,17 +14,11 @@ static inline void nop_(){}
 static inline int
 forth(char *start){
 char *p = start;
-trace=1;
+trace=0;
 { UC x[] = { HALT, 00, 00 }; memcpy( p, x, sizeof x ); p += 16; } 
 HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
 HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
-HEADLESS(dovar, dovar, //MOV(,R,BX,AX), LEA(,B,AX,BX_),0, 
-                       //ADDAX,2,0, 
-	               //MOV(,R,AX,BX),
-	               //INC_(R,AX), //INC_(R,AX), 
-	               MOV(,R,BX,AX), LEA(,B,AX,BX_),2,
-                       PUSH(AX))
-	               //PUSH(SI))
+HEADLESS(dovar, dovar, MOV(,R,BX,AX), LEA(,B,AX,BX_),2, PUSH(AX))
 CODE(exit,  exit,      POPRSP(SI))
 CODE(emit,  emit,      POP(DX), MOVAXI(00,02), INT(21))
 CODE(key,   key,       MOVAXI(00,01), INT(21), PUSH(AX))
@@ -75,13 +69,26 @@ CODE(bye,   bye,       HALT)
 //WORD(1,     one,       c_enter, c_lit, 1)
 WORD(0,     zero,      c_docon, 0)
 WORD(1,     one,       c_docon, 1)
-WORD(x,     x,         c_dovar, 5)
+WORD(x,     x,         c_dovar, 42)
 WORD(10,    ten,       c_enter, c_lit, 10)
 WORD(cr,    cr,        c_enter, c_lit,'\n', c_emit)
 WORD(space, space,     c_enter, c_lit,' ', c_emit)
-WORD(.,     dot,       c_enter, c_dup, c_zless, c_zbranch, 4, c_lit, '-', c_emit, c_minus,
-                                c_ten, c_divmod, c_swap, c_lit, '0', c_add, c_emit,
-                                c_dup, c_zeq, c_zbranch, -11, c_space)
+WORD(digits,digits,    c_dovar, 0)
+WORD(.start,dotstart,  c_enter, c_zero, c_digits, c_bang)
+WORD(.neg,  dotneg,    c_enter, c_dup, c_zless, c_zbranch, 4, c_lit, '-', c_emit, c_minus)
+WORD(.emit, dotemit,   c_enter, c_lit, '0', c_add, c_emit)
+WORD(.expand,dotexpand,c_enter, c_ten, c_divmod, c_one, c_digits, c_plusbang,
+                                c_dup, c_zeq, c_zbranch, -9)
+WORD(.digits,dotdigits,c_enter, c_drop, c_dotemit, c_one, c_digits, c_minusbang, 
+                                c_digits, c_at, c_zeq, c_zbranch, -9)
+WORD(.,     dot,       c_enter, c_dotstart,
+                                c_dotneg, 
+                                c_dotexpand, //c_digits, c_at, c_dotemit,
+                                c_dotdigits,
+                                c_space)
+//WORD(.,     dot,       c_enter, c_dup, c_zless, c_zbranch, 4, c_lit, '-', c_emit, c_minus,
+//                                c_ten, c_divmod, c_swap, c_lit, '0', c_add, c_emit,
+//                                c_dup, c_zeq, c_zbranch, -11, c_space)
 WORD(ok,    ok,        c_enter, c_lit,'O',c_emit, c_lit,'K',c_emit, c_cr)
 WORD(here,  here,      c_enter, c_lit, 0)
 WORD(allot, allot,     c_enter, c_lit, c_here+4, c_plusbang)
@@ -96,14 +103,15 @@ WORD(test2, test2,     c_enter, c_lit,12,            c_zless, c_dot,
 WORD(test3, test3,     c_enter, c_here, c_lit, 12, c_allot, 
                                 c_lit, 12, c_type, c_ok)
 WORD(test4, test4,     c_enter, c_x, c_dot, c_x, c_at, c_dot, c_ok)
-//c_ten, c_x, c_bang, c_x, c_at, c_dot, c_ok)
-printf( "%s:%d", "dovar", c_dovar );
-printf( "%s:%d", "test4", c_test4 );
+WORD(test5, test5,     c_enter, c_ten, c_x, c_bang, c_x, c_at, c_dot, c_ok)
+//printf( "%s:%d", "dovar", c_dovar );
+//printf( "%s:%d", "test4", c_test4 );
 WORD(test,  test,      c_enter, c_test0, c_cr,
                                 c_test1, c_cr,
                                 c_test2, c_cr,
                                 c_test3, c_cr,
                                 c_test4, c_cr,
+                                c_test5, c_cr,
                                 c_bye)
 memcpy( start+c_here+4, (US[]){ p-start }, 2);
 memcpy( p, "Hello world!", 12 );
