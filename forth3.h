@@ -90,23 +90,6 @@ WORD(.digits,dotdigits,enter,   swap, dotemit, oneminus, // ... nN-1 N-1  [nN=>o
                                 dup, zeq, zbranch, -7,  drop) // |-
 WORD(.,     dot,       enter, dotneg, dotexpand,  //dup, dotemit,
                               dotdigits, space)
-//WORD(digits,digits,    dovar, 0)
-//WORD(.start,dotstart,  enter, zero, digits, bang)
-//WORD(.neg,  dotneg,    enter, dup, zless, zbranch, 4, lit, '-', emit, minus)
-//WORD(.emit, dotemit,   enter, lit, '0', add, emit)
-//WORD(.expand,dotexpand,enter, base, at, divmod, one, digits, plusbang,
-//                              dup, zeq, zbranch, -9)
-//WORD(.digits,dotdigits,enter, drop,
-//                              dotemit, one, digits, minusbang, 
-//                              digits, at, zeq, zbranch, -9)
-//WORD(.,     dot,       enter, dotstart,
-//                              dotneg, 
-//                              dotexpand, //digits, at, dotemit,
-//                              dotdigits,
-//                              space)
-//WORD(.,     dot,       enter, dup, zless, zbranch, 4, lit, '-', emit, minus,
-//                              ten, divmod, swap, lit, '0', add, emit,
-//                              dup, zeq, zbranch, -11, space)
 WORD(ok,    ok,        enter, lit,'O',emit, lit,'K',emit, cr)
 WORD(here,  here,      enter, lit, 0)
 WORD(allot, allot,     enter, lit, here+4, plusbang)

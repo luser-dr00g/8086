@@ -136,10 +136,13 @@ U decseg(U sr){         // decode segment register
                        | ( (z&(w?0xffff:0xff))==0        ?ZF:0) ;
 
     // additional flags set by math operators
-#define MATHFLAGS *fl |= ( (z&(w?0xffff0000:0xff00))     ?CF:0) \
-                       | ( ((x^z)&(x^y)&(w?0x8000:0x80)) ?OF:0) \
-                       | ( ((x^y^z)&0x10)                ?AF:0); \
-                       SETPF
+#define MATHFLAGS(Overflow) *fl |= ( (z&(w?0xffff0000:0xff00))     ?CF:0) \
+                                | (Overflow) \
+                                | ( ((x^y^z)&0x10)                ?AF:0); \
+                                SETPF
+
+#define ADDFLAGS MATHFLAGS( ((z^x)&(z^y)&(w?0x8000:0x80)) ?OF:0)
+#define SUBFLAGS MATHFLAGS( ((x^z)&(x^y)&(w?0x8000:0x80)) ?OF:0)
 
 #define MULFLAGS  *fl &= ~(CF|OF); \
                   *fl |= (w?*dx:*ah)?CF|OF:0;
@@ -157,9 +160,9 @@ U decseg(U sr){         // decode segment register
     // most of these macros will "enter" with x and y already loaded with operands
 #define PUSH(x) put_(mem+(*sp-=2),*(x),1)
 #define POP(x) *(x)=get_(mem+(*sp+=2)-2,1)
-#define ADD z=x+y; LOGFLAGS MATHFLAGS RESULT
+#define ADD z=x+y; LOGFLAGS ADDFLAGS RESULT
 #define ADC x+=F(CF); ADD
-#define SUB z=d?x-y:y-x; LOGFLAGS MATHFLAGS RESULT
+#define SUB z=d?x-y:y-x; LOGFLAGS SUBFLAGS RESULT
 #define SBB *(d?&y:&x)+=F(CF); SUB
 #define CMP p=null; SUB
 #define AND z=x&y; LOGFLAGS RESULT
@@ -203,7 +206,7 @@ U decseg(U sr){         // decode segment register
                           CASE 6:XOR \
                           CASE 7:CMP }
 #define IMMIS IMM(w=0;,w=1;x=(S)(C)x;)
-#define TEST z=x&y; LOGFLAGS MATHFLAGS
+#define TEST z=x&y; LOGFLAGS ADDFLAGS
 #define XCHG f=x;z=y; LDXY if(w){*(US*)f=y;*(US*)z=x;}else{*(UC*)f=y;*(UC*)z=x;}
 #define MOV z=d?y:x; RESULT
 #define MOVSEG rm r=mrm(fetchb()); \
@@ -229,7 +232,7 @@ U decseg(U sr){         // decode segment register
 #define CMPS x=(I)si; y=(I)di; LDXY CMP *di+=Offset; *si+=Offset;
 #define STOS put_(di,w?*ax:*al,w); *di+=Offset;
 #define LODS if(w) *ax=get_(mem+*si,w); else *al=get_(mem+*si,w); *si+=Offset;
-#define SCAS z=(x=w?*ax:*al)-(y=get_(di,w)); LOGFLAGS MATHFLAGS *di+=Offset;
+#define SCAS z=(x=w?*ax:*al)-(y=get_(di,w)); LOGFLAGS ADDFLAGS *di+=Offset;
 #define iMOVb(r) (*r)=fetchb();
 #define iMOVw(r) if(trace>1)P("r:%d ",(U)r); (*r)=fetchw();
 #define RET(v) POP(ip); if(v)*sp+=v*2;
