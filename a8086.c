@@ -142,7 +142,7 @@ U decseg(U sr){         // decode segment register
                                 SETPF
 
 #define ADDFLAGS MATHFLAGS( ((z^x)&(z^y)&(w?0x8000:0x80)) ?OF:0)
-#define SUBFLAGS MATHFLAGS( ((x^z)&(x^y)&(w?0x8000:0x80)) ?OF:0)
+#define SUBFLAGS MATHFLAGS( (((d?x:y)^z)&(x^y)&(w?0x8000:0x80)) ?OF:0)
 
 #define MULFLAGS  *fl &= ~(CF|OF); \
                   *fl |= (w?*dx:*ah)?CF|OF:0;

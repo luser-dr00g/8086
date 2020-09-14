@@ -40,6 +40,10 @@
 #define           DH 6
 #define           BH 7
 #define TEST(m,r,r_m) 0x85,MRM(m,r,r_m)
+#define SHL(m,   r_m) 0xd1,MRM(m,4,r_m) 
+#define SHRC(m,  r_m) 0xd3,MRM(m,5,r_m)
+#define NOT(m,   r_m) 0xf7,MRM(m,2,r_m)
+#define NEG(m,   r_m) 0xf7,MRM(m,3,r_m)
 #define MUL(m,   r_m) 0xf7,MRM(m,4,r_m)
 #define IMUL(m,  r_m) 0xf7,MRM(m,5,r_m)
 #define DIV(m,   r_m) 0xf7,MRM(m,6,r_m)
@@ -47,11 +51,10 @@
 #define INC_(m,  r_m) 0xff,MRM(m,0,r_m)
 #define DEC_(m,  r_m) 0xff,MRM(m,1,r_m)
 #define JMP_(m,  r_m) 0xff,MRM(m,5,r_m)
-#define SHL(m,   r_m) 0xd1,MRM(m,4,r_m) 
-#define POP(r)    0x58+r
 #define PUSH(r)   0x50+r
+#define POP(r)    0x58+r
 #define ADDAX     0x05
-#define LODS      0xAD
+#define LODS      0xad
 #define JZ        0x74
 #define JNZ       0x75
 #define JS        0x78
@@ -60,11 +63,8 @@
 #define JGE       0x7D
 #define JLE       0x7E
 #define JG        0x7F
-#define LAHF      0x9F
+#define LAHF      0x9f
 #define HALT      0xF4
-#define SHRC(m,r) 0xD3,MRM(m,5,r)
-#define NOT(m, r) 0xF7,MRM(m,2,r)
-#define NEG(m, r) 0xF7,MRM(m,3,r)
 #define INT(no)   0xCD,0x##no
 #define MOVAXI(a,b) 0xB8,a,b
 #define MOVCXI(a,b) 0xB9,a,b
