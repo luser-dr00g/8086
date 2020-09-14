@@ -263,7 +263,7 @@ U decseg(U sr){         // decode segment register
 #define RCR
 #define SHL z=y<<1; RESULT
 #define SHR z=y>>1; RESULT
-#define SAR z=(S)y>>1; RESULT
+#define SAR z=(w?(I)(S)(US)y:(I)(C)(UC)y)>>1; RESULT
 #define ShiftCL rm r=mrm(fetchb());
 #define XLAT
 #define ESC(v)

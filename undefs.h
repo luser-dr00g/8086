@@ -30,7 +30,9 @@
 #undef            BP_
 #undef            BX_
 #undef TEST
+#undef MUL
 #undef IMUL
+#undef DIV
 #undef IDIV
 #undef INC_
 #undef DEC_

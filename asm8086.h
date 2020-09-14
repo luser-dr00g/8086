@@ -40,7 +40,9 @@
 #define           DH 6
 #define           BH 7
 #define TEST(m,r,r_m) 0x85,MRM(m,r,r_m)
+#define MUL(m,   r_m) 0xf7,MRM(m,4,r_m)
 #define IMUL(m,  r_m) 0xf7,MRM(m,5,r_m)
+#define DIV(m,   r_m) 0xf7,MRM(m,6,r_m)
 #define IDIV(m,  r_m) 0xf7,MRM(m,7,r_m)
 #define INC_(m,  r_m) 0xff,MRM(m,0,r_m)
 #define DEC_(m,  r_m) 0xff,MRM(m,1,r_m)

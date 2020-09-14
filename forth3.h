@@ -53,6 +53,7 @@ CODE(*,     mul,       POP(AX), POP(BX), IMUL(R,BX), PUSH(AX))
 CODE(/,     div,       POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(AX))
 CODE(mod,   mod,       POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(DX))
 CODE(/mod,  divmod,    POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(DX), PUSH(AX))
+CODE(u/mod, udivmod,   POP(BX), XOR(,R,DX,DX), POP(AX), DIV(R,BX), PUSH(DX), PUSH(AX))
 CODE(*/mod, muldivmod, POP(CX), POP(BX), POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(DX), PUSH(AX))
 CODE(*/,    muldiv,    POP(CX), POP(BX), POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(AX))
 CODE(max,   max,       POP(BX), POP(AX), CMP(,R,AX,BX), JL,2, MOV(,R,AX,BX), PUSH(AX))
@@ -67,7 +68,7 @@ CODE(@,     at,        POP(BX), MOV(,Z,AX,BX_), PUSH(AX))
 CODE(+!,    plusbang,  POP(BX), POP(AX), ADD(F,Z,AX,BX_))
 CODE(-!,    minusbang, POP(BX), POP(AX), SUB(F,Z,AX,BX_))
 CODE(type,  type,      POP(CX), POP(BX), MOVAXI(00,02), 
-                       BYTE+MOV(,Z,DL,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ,-10)
+                       MOV(BYTE,Z,DL,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ,-10)
 CODE(bye,   bye,       HALT)
 WORD(0,     zero,      docon, 0)
 WORD(1,     one,       docon, 1)
@@ -76,20 +77,23 @@ WORD(var,   var,       dovar, 42)
 WORD(base,  base,      dovar, 10)
 WORD(cr,    cr,        enter, lit,'\n', emit)
 WORD(space, space,     enter, lit,' ', emit)
-WORD(.neg,  dotneg,    enter, dup, zless, zbranch, 4, lit, '-', emit, minus)
+WORD(.sign, dotsign,   enter, dup, zless, zbranch, 4, lit, '-', emit, minus)
 WORD(.emit, dotemit,   enter, dup,  ten, less, zbranch, 5,
-                                    lit, '0', add,
-                                    branch, 5,
-                                    lit, 'A', add, ten, sub,
+                                    lit, '0', add, branch, 3,
+                                    lit, 'A'-10, add,
                               emit)
-WORD(.expand,dotexpand,enter, zero, swap,              // ... d n
-                                base, at, divmod,      // ... d n%b n/b
-                                rot, oneplus, swap,    // n%b d+1 n/b
+WORD(.expand,dotexpand,enter, zero, swap,                      //     d n
+                                base, at, divmod,              // ... d n%b n/b
+                                rot, oneplus, swap,            // n%b d+1 n/b
                                 dup, zeq, zbranch, -10,  drop) // n0 n1 ... nN N
-WORD(.digits,dotdigits,enter,   swap, dotemit, oneminus, // ... nN-1 N-1  [nN=>output]
-                                dup, zeq, zbranch, -7,  drop) // |-
-WORD(.,     dot,       enter, dotneg, dotexpand,  //dup, dotemit,
-                              dotdigits, space)
+WORD(.digits,dotdigits,enter,   swap, dotemit, oneminus,       // ... nN-1 N-1  [nN=>output]
+                                dup, zeq, zbranch, -7,  drop)  // |-
+WORD(.,     dot,       enter, dotsign, dotexpand, dotdigits, space)
+WORD(u.expand,udotexpand,enter,zero,swap,
+                                base, at, udivmod,
+                                rot, oneplus, swap,
+                                dup, zeq, zbranch, -10, drop)
+WORD(u.,    udot,      enter, udotexpand, dotdigits, space)
 WORD(ok,    ok,        enter, lit,'O',emit, lit,'K',emit, cr)
 WORD(here,  here,      enter, lit, 0)
 WORD(allot, allot,     enter, lit, here+4, plusbang)
@@ -107,7 +111,8 @@ WORD(test3, test3,     enter, here, lit, 12, allot,
                               lit, 12, type, ok)
 WORD(test4, test4,     enter, var, dot, var, at, dot, ok)
 WORD(test5, test5,     enter, ten, var, bang, var, at, dot, ok)
-WORD(test6, test6,     enter, lit, 16, base, bang, var, dot, ok)
+WORD(test6, test6,     enter, lit, 16, base, bang, var, dot, var, at, dot, ok)
+WORD(test7, test7,     enter, lit, -10, udot, ok)
 WORD(test,  test,      enter, test0, cr,
                               test1, cr,
                               test2, cr,
@@ -116,6 +121,7 @@ WORD(test,  test,      enter, test0, cr,
                               test4, cr,
                               test5, cr,
                               test6, cr,
+                              test7, cr,
                               bye)
 memcpy( start+here+4, (US[]){ p-start }, 2);
 memcpy( p, "Hello world!", 12 );
