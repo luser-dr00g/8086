@@ -137,7 +137,7 @@ U decseg(U sr){         // decode segment register
 
     // additional flags set by math operators
 #define MATHFLAGS *fl |= ( (z&(w?0xffff0000:0xff00))     ?CF:0) \
-                       | ( ((z^x)&(z^y)&(w?0x8000:0x80)) ?OF:0) \
+                       | ( ((x^z)&(x^y)&(w?0x8000:0x80)) ?OF:0) \
                        | ( ((x^y^z)&0x10)                ?AF:0); \
                        SETPF
 
