@@ -51,8 +51,10 @@ U ss_(US *adr){ R  segment( ss, adr ); }
 U es_(US *adr){ R  segment( es, adr ); }
 
 // get and put into memory in a strictly little-endian format
-I get_(void*p,U w){R w? *(UC*)p + (((UC*)p)[1]<<8) :*(UC*)p;}
-V put_(void*p,U x,U w){ if(w){ *(UC*)p=x; ((UC*)p)[1]=x>>8; }else *(UC*)p=x; }
+//I get_(void*p,U w){R w? *(UC*)p + (((UC*)p)[1]<<8) :*(UC*)p;}
+//V put_(void*p,U x,U w){ if(w){ *(UC*)p=x; ((UC*)p)[1]=x>>8; }else *(UC*)p=x; }
+I get_(void*p,U w){UC*c=p;R c[0]|(w?c[1]<<8:0);}
+V put_(void*p,U x,U w){UC*c=p;c[0]=x;if(w)c[1]=x>>8;}
 
 // get byte or word through cs:ip, incrementing ip
 //UC fetchb(){ U x = get_(mem+(*ip)++,0); if(trace)P("%02x(%03o) ",x,x); R x; }
