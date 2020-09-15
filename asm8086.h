@@ -66,8 +66,9 @@
 #define LAHF      0x9f
 #define HALT      0xF4
 #define INT(no)   0xCD,0x##no
-#define MOVAXI(a,b) 0xB8,a,b
-#define MOVCXI(a,b) 0xB9,a,b
-#define MOVSII(a,b) 0xBE,a,b
-#define MOVBPI(a,b) 0xBD,a,b
+#define MOVAXI(a,b) 0xb8,a,b
+#define MOVCXI(a,b) 0xb9,a,b
+#define MOVSPI(a,b) 0xbc,a,b
+#define MOVBPI(a,b) 0xbd,a,b
+#define MOVSII(a,b) 0xbe,a,b
 #define CALL    0xE8

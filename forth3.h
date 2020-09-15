@@ -8,6 +8,9 @@
 #define PUSHRSP(r) 	LEA(,B,BP,BP_),minus(4), MOV(F,B,r,BP_),0
 #define POPRSP(r)  	MOV(,B,r,BP_),0, LEA(,B,BP,BP_),4
 #define minus(x)	1+(0xff^x)
+#define MOVAX( val )    MOVAXI( (val)%0x100, (val)/0x100 )
+#define JMPAX( addr )   MOVAX(addr), JMP_(R,AX)
+#define PUSHAX( val )   MOVAX(val), PUSH(AX)
 
 static inline void nop_(){}
 
@@ -120,6 +123,14 @@ WORD(test,    test,      enter, test0, cr,
                                 test6, cr,
                                 test7, cr,
                                 bye)
+int dummy = 0;
+CODE(interpret, interpret, JMPAX(dummy))
+CODE(accept,    accept,    JMPAX(interpret))
+  //UC patch[] = { JMPAX(accept) }; memcpy(start+interpret, patch, sizeof patch );
+  memcpy(start+interpret+1, (US[]){ accept }, sizeof(US));
+HEADLESS(quit,  quit,      MOVBPI( 0x00,0x20 ), JMPAX(accept))
+HEADLESS(abort, abort,     MOVSPI( 0x00,0xf0 ), JMPAX(quit))
+HEADLESS(cold,  cold,      JMPAX(abort))
 memcpy( start+here+4, (US[]){ p-start }, 2);
 memcpy( p, "Hello world!", 12 );
 nop_();

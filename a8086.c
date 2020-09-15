@@ -158,8 +158,8 @@ U decseg(U sr){         // decode segment register
 
 // operators, composed with helpers in the opcode table below
     // most of these macros will "enter" with x and y already loaded with operands
-#define PUSH(x) put_(mem+(*sp-=2),*(x),1)
-#define POP(x) *(x)=get_(mem+(*sp+=2)-2,1)
+#define PUSH(x) *sp-=2,put_(mem+ss_(sp),*(x),1)
+#define POP(x) *(x)=get_(mem+ss_(sp),1),*sp+=2
 #define ADD z=x+y; LOGFLAGS ADDFLAGS RESULT
 #define ADC x+=F(CF); ADD
 #define SUB z=d?x-y:y-x; LOGFLAGS SUBFLAGS RESULT
