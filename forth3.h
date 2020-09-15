@@ -42,8 +42,8 @@ CODE(2dup,  twodup,    MOV(,R,BX,SP),MOV(,B,AX,BX_),0, MOV(,B,CX,BX_),2, PUSH(AX
 CODE(0=,    zeq,       POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JZ,2,INC_(R,AX), PUSH(AX))
 CODE(0<,    zless,     POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JL,2,INC_(R,AX), PUSH(AX))
 CODE(0>,    zmore,     POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JG,2,INC_(R,AX), PUSH(AX))
-CODE(<,     less,      POP(CX),POP(BX), MOVAXI(0xff,0xff), CMP(,R,BX,CX), JL,2,INC_(R,AX), PUSH(AX))
-CODE(>,     more,      POP(CX),POP(BX), MOVAXI(0xff,0xff), CMP(,R,BX,CX), JG,2,INC_(R,AX), PUSH(AX))
+CODE(<,     less,      POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JL,2,INC_(R,AX),PUSH(AX))
+CODE(>,     more,      POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JG,2,INC_(R,AX),PUSH(AX))
 CODE(not,   not,       POP(AX), NOT(R,AX), PUSH(AX))
 CODE(1+,    oneplus,   MOV(,R,BX,SP), INC_(B,BX_),0)
 CODE(1-,    oneminus,  MOV(,R,BX,SP), DEC_(B,BX_),0)
@@ -70,59 +70,56 @@ CODE(-!,    minusbang, POP(BX), POP(AX), SUB(F,Z,AX,BX_))
 CODE(type,  type,      POP(CX), POP(BX), MOVAXI(00,02), 
                        MOV(BYTE,Z,DL,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ,-10)
 CODE(bye,   bye,       HALT)
-WORD(0,     zero,      docon, 0)
-WORD(1,     one,       docon, 1)
-WORD(10,    ten,       docon, 10)
-WORD(var,   var,       dovar, 42)
-WORD(base,  base,      dovar, 10)
-WORD(cr,    cr,        enter, lit,'\n', emit)
-WORD(space, space,     enter, lit,' ', emit)
-WORD(.sign, dotsign,   enter, dup, zless, zbranch, 4, lit, '-', emit, minus)
-WORD(.emit, dotemit,   enter, dup,  ten, less, zbranch, 5,
-                                    lit, '0', add, branch, 3,
-                                    lit, 'A'-10, add,
-                              emit)
-WORD(.expand,dotexpand,enter, zero, swap,                      //     d n
-                                base, at, divmod,              // ... d n%b n/b
-                                rot, oneplus, swap,            // n%b d+1 n/b
-                                dup, zeq, zbranch, -10,  drop) // n0 n1 ... nN N
-WORD(.digits,dotdigits,enter,   swap, dotemit, oneminus,       // ... nN-1 N-1  [nN=>output]
-                                dup, zeq, zbranch, -7,  drop)  // |-
-WORD(.,     dot,       enter, dotsign, dotexpand, dotdigits, space)
-WORD(u.expand,udotexpand,enter,zero,swap,
-                                base, at, udivmod,
-                                rot, oneplus, swap,
-                                dup, zeq, zbranch, -10, drop)
-WORD(u.,    udot,      enter, udotexpand, dotdigits, space)
-WORD(ok,    ok,        enter, lit,'O',emit, lit,'K',emit, cr)
-WORD(here,  here,      enter, lit, 0)
-WORD(allot, allot,     enter, lit, here+4, plusbang)
-WORD(test0, test0,     enter, zero, dot,
-                              one, dot, ten, dot, ok)
-WORD(test1, test1,     enter, zero, zeq, dot,
-                              one, zeq, dot, ok)
-WORD(test2, test2,     enter, lit,12,            zless, dot,
-                              lit,1+(0xffff^50), zless, dot,
-                              lit,12,            zmore, dot,
-                              lit,1+(0xffff^50), zmore, dot, ok)
-WORD(test2a,test2a,    enter, one, ten, less, dot,
-                              one, ten, more, dot, ok)
-WORD(test3, test3,     enter, here, lit, 12, allot, 
-                              lit, 12, type, ok)
-WORD(test4, test4,     enter, var, dot, var, at, dot, ok)
-WORD(test5, test5,     enter, ten, var, bang, var, at, dot, ok)
-WORD(test6, test6,     enter, lit, 16, base, bang, var, dot, var, at, dot, ok)
-WORD(test7, test7,     enter, lit, -10, udot, ok)
-WORD(test,  test,      enter, test0, cr,
-                              test1, cr,
-                              test2, cr,
-                              test2a, cr,
-                              test3, cr,
-                              test4, cr,
-                              test5, cr,
-                              test6, cr,
-                              test7, cr,
-                              bye)
+WORD(0,       zero,      docon, 0)
+WORD(1,       one,       docon, 1)
+WORD(10,      ten,       docon, 10)
+WORD(var,     var,       dovar, 42)
+WORD(base,    base,      dovar, 10)
+WORD(cr,      cr,        enter, lit,'\n', emit)
+WORD(space,   space,     enter, lit,' ', emit)
+WORD(.sign,   dotsign,   enter, dup, zless, zbranch, 4, lit, '-', emit, minus)
+WORD(.emit,   dotemit,   enter, dup,  ten, less, zbranch, 5,
+                                  lit, '0', add, branch, 3,
+                                  lit, 'A'-10, add,
+                                emit)
+WORD(.expand, dotexpand, enter, zero,swap,
+                                  base, at, udivmod, rot, oneplus, swap,
+                                  dup, zeq, zbranch, -10,
+                                drop)
+WORD(.digits, dotdigits, enter,   swap, dotemit, oneminus,
+                                  dup, zeq, zbranch, -7,
+                                drop)
+WORD(u.,      udot,      enter, dotexpand, dotdigits, space)
+WORD(.,       dot,       enter, dotsign, udot)
+WORD(ok,      ok,        enter, lit,'O',emit, lit,'K',emit, cr)
+WORD(here,    here,      enter, lit, 0)
+WORD(allot,   allot,     enter, lit, here+4, plusbang)
+WORD(test0,   test0,     enter, zero, dot,
+                                one, dot, ten, dot, ok)
+WORD(test1,   test1,     enter, zero, zeq, dot,
+                                one, zeq, dot, ok)
+WORD(test2,   test2,     enter, lit,12,            zless, dot,
+                                lit,1+(0xffff^50), zless, dot,
+                                lit,12,            zmore, dot,
+                                lit,1+(0xffff^50), zmore, dot, ok)
+WORD(test2a,  test2a,    enter, one, ten, less, dot,
+                                one, ten, more, dot, ok)
+WORD(test3,   test3,     enter, here, lit, 12, allot, 
+                                lit, 12, type, ok)
+WORD(test4,   test4,     enter, var, dot, var, at, dot, ok)
+WORD(test5,   test5,     enter, ten, var, bang, var, at, dot, ok)
+WORD(test6,   test6,     enter, lit, 16, base, bang, var, dot, var, at, dot, ok)
+WORD(test7,   test7,     enter, lit, -10, udot, ok)
+WORD(test,    test,      enter, test0, cr,
+                                test1, cr,
+                                test2, cr,
+                                test2a, cr,
+                                test3, cr,
+                                test4, cr,
+                                test5, cr,
+                                test6, cr,
+                                test7, cr,
+                                bye)
 memcpy( start+here+4, (US[]){ p-start }, 2);
 memcpy( p, "Hello world!", 12 );
 nop_();
