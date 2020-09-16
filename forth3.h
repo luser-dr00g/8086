@@ -44,15 +44,15 @@ CODE(>r,     to_r,     POP(AX), PUSHRSP(AX))
 CODE(r>,     from_r,   POPRSP(AX), PUSH(AX))
 CODE(r,      r,        MOV(,B,AX,BP_),0, PUSH(AX))
 CODE(2drop,  twodrop,  POP(AX), POP(AX))
-CODE(2dup,   twodup,   MOV(,R,BX,SP),MOV(,B,AX,BX_),0, MOV(,B,CX,BX_),2, PUSH(CX),PUSH(AX))
-CODE(3dup,   threedup, MOV(,R,BX,SP),MOV(,B,AX,BX_),0, MOV(,B,CX,BX_),2, MOV(,B,DX,BX_),4,
-                        PUSH(DX), PUSH(CX), PUSH(AX))
+CODE(2dup,   twodup,   POP(BX), POP(AX), PUSH(AX), PUSH(BX), PUSH(AX), PUSH(BX))
+CODE(3dup,   threedup, POP(CX), POP(BX), POP(AX),
+                       PUSH(AX), PUSH(BX), PUSH(CX), PUSH(AX), PUSH(BX), PUSH(CX))
 CODE(0=,     zeq,      POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JZ,2,INC_(R,AX), PUSH(AX))
 CODE(0<,     zless,    POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JL,2,INC_(R,AX), PUSH(AX))
 CODE(0>,     zmore,    POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JG,2,INC_(R,AX), PUSH(AX))
-CODE(=,      eq,       POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JZ,2,INC_(R,AX),PUSH(AX))
-CODE(<,      less,     POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JL,2,INC_(R,AX),PUSH(AX))
-CODE(>,      more,     POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JG,2,INC_(R,AX),PUSH(AX))
+CODE(=,      eq,   POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JZ,2,INC_(R,AX),PUSH(AX))
+CODE(<,      less, POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JL,2,INC_(R,AX),PUSH(AX))
+CODE(>,      more, POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JG,2,INC_(R,AX),PUSH(AX))
 CODE(not,    not,      POP(AX), NOT(R,AX), PUSH(AX))
 CODE(1+,     oneplus,  MOV(,R,BX,SP), INC_(B,BX_),0)
 CODE(1-,     oneminus, MOV(,R,BX,SP), DEC_(B,BX_),0)
@@ -63,7 +63,7 @@ CODE(/,      div,      POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(AX))
 CODE(mod,    mod,      POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(DX))
 CODE(/mod,   divmod,   POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(DX), PUSH(AX))
 CODE(u/mod,  udivmod,  POP(BX), XOR(,R,DX,DX), POP(AX), DIV(R,BX), PUSH(DX), PUSH(AX))
-CODE(*/mod,  muldivmod,POP(CX), POP(BX), POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(DX), PUSH(AX))
+CODE(*/mod,  muldivmod,POP(CX),POP(BX),POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(DX), PUSH(AX))
 CODE(*/,     muldiv,   POP(CX), POP(BX), POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(AX))
 CODE(max,    max,      POP(BX), POP(AX), CMP(,R,AX,BX), JL,2, MOV(,R,AX,BX), PUSH(AX))
 CODE(min,    min,      POP(BX), POP(AX), CMP(,R,AX,BX), JG,2, MOV(,R,AX,BX), PUSH(AX))
@@ -193,6 +193,7 @@ nop_();
 US init = test + 2;
 { UC x[] = { MOVBPI( 0x00,0x01 ), MOVSII(init%0x100,init/0x100), NEXT };
   memcpy( start, x, sizeof x ); }
+if(trace){P("\n");}
 trace=0;
 return  0;}
 
