@@ -51,23 +51,27 @@ U ss_(US *adr){ R  segment( ss, adr ); }
 U es_(US *adr){ R  segment( es, adr ); }
 
 // get and put into memory in a strictly little-endian format
-//I get_(void*p,U w){R w? *(UC*)p + (((UC*)p)[1]<<8) :*(UC*)p;}
-//V put_(void*p,U x,U w){ if(w){ *(UC*)p=x; ((UC*)p)[1]=x>>8; }else *(UC*)p=x; }
 I get_(void*p,U w){UC*c=p;R c[0]|(w?c[1]<<8:0);}
 V put_(void*p,U x,U w){UC*c=p;c[0]=x;if(w)c[1]=x>>8;}
+I bget(void*p){ R get_(p, 0); }
+I wget(void*p){ R get_(p, 1); }
+V bput(void*p,U x){ put_(p, x, 0); }
+V wput(void*p,U x){ put_(p, x, 1); }
 
 // get byte or word through cs:ip, incrementing ip
 //UC fetchb(){ U x = get_(mem+(*ip)++,0); if(trace)P("%02x(%03o) ",x,x); R x; }
-UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); ++*ip; if(trace)P("%02x(%03o) ",x,x); R x; }
+//UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); ++*ip; if(trace)P("%02x(%03o) ",x,x); R x; }
+U inc(US*p){ wput( p, 1 + wget( p ) ); }
+UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); inc(ip); if(trace)P("%02x(%03o) ",x,x); R x; }
 US fetchw(){I w=fetchb();R w|(fetchb()<<8);}
 
 void interrupt( UC no ){
   switch(no){
   CASE 0x00: printf("div by zero trap\n");
-  CASE 0x21: switch(*ah){
-             CASE 0x01: *al = getchar();
-             CASE 0x02: putchar(*al=*dl); if(*al=='\t')*al=' ';
-	     CASE 0x09: f=*dx; while(mem[f]!='$')putchar(mem[f++]); *al='$';
+  CASE 0x21: switch(bget(ah)){
+             CASE 0x01: bput(al, getchar());
+             CASE 0x02: putchar(bget(dl)); bput(al,bget(dl)); if(bget(al)=='\t')bput(al,' ');
+	     CASE 0x09: f=*dx; while(mem[f]!='$')putchar(mem[f++]); bput(al,'$');
 	     CASE 0x2A: {time_t t=time(NULL);struct tm*tm=localtime(&t);
 	                 *cx=tm->tm_year;
                          *dh=tm->tm_mon;

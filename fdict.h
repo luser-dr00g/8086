@@ -15,6 +15,7 @@ struct headless_entry {
   UC name_len;
   UC name[ MAX_NAME ];
   UC param[ MAX_CODE_PARAM ];
+  US dummy;
 };
 
 struct word_entry {
@@ -29,14 +30,15 @@ struct word_entry {
   const US  e  = P_CODE_PTR; 				\
   {							\
     struct code_entry x = { 				\
-      .link     = - (int)sizeof x, 			\
+      .link     = link, 				\
       .name_len = sizeof(  # n  ) - 1, 			\
       .name     = # n , 				\
       .code     = P_PARAM_PTR, 				\
       .param    = { __VA_ARGS__ , NEXT }		\
     };							\
     memcpy( p, &x, sizeof x ); 				\
-    if(trace)printf("%s:%d ", #e, e);			\
+    if(trace)printf("%s:%x ", #e, e);			\
+    link = p - start;					\
     p += sizeof x; 					\
   } 							\
 /*end CODE()*/
@@ -48,33 +50,35 @@ struct word_entry {
   const US  e  = P_HEADLESS_PTR;			\
   {							\
     struct headless_entry x = {				\
-      .link     = - (int)sizeof x,			\
+      .link     = link,					\
       .name_len = sizeof(  # n  ) - 1,			\
       .name     = # n ,					\
       .param    = { __VA_ARGS__ , NEXT }		\
     };							\
     memcpy( p, &x, sizeof x );				\
-    if(trace)printf("%s:%d ", #e, e);			\
+    if(trace)printf("%s:%x ", #e, e);			\
+    link = p - start;					\
     p += sizeof x;					\
   }
 /*end HEADLESS()*/
 
 #define P_HEADLESS_PTR ( p - start ) + offsetof( struct headless_entry, param )
 
-#define WORD(namestring, cname, codeword, ...) 			\
-  const US  cname  = P_WORD_PTR;				\
-  {								\
-    struct word_entry x = { 					\
-      .link     = - (int)sizeof x, 				\
-      .name_len = sizeof(  # namestring  ) - 1, 		\
-      .name     = # namestring ,				\
-      .code     = codeword ,	 				\
-      .param    = { __VA_ARGS__ , c_exit } 			\
-    }; 								\
-    memcpy( p, &x, sizeof x ); 					\
-    if(trace)printf("%s:%d ", #cname, cname);			\
-    p += sizeof x; 						\
-  } 								\
+#define WORD(namestring, cname, codeword, ...) 		\
+  const US  cname  = P_WORD_PTR;			\
+  {							\
+    struct word_entry x = { 				\
+      .link     = link,		 			\
+      .name_len = sizeof(  # namestring  ) - 1, 	\
+      .name     = # namestring ,			\
+      .code     = codeword ,	 			\
+      .param    = { __VA_ARGS__ , c_exit } 		\
+    }; 							\
+    memcpy( p, &x, sizeof x ); 				\
+    if(trace)printf("%s:%x ", #cname, cname);		\
+    link = p - start;					\
+    p += sizeof x; 					\
+  } 							\
 /*end WORD()*/
 
 #define P_WORD_PTR ( p - start ) + offsetof( struct word_entry, code )

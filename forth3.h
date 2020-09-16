@@ -17,13 +17,15 @@ static inline void nop_(){}
 static inline int
 forth(char *start){
 char *p = start;
-trace=0;
+unsigned link = 0;
+trace=1;
 { UC x[] = { HALT, 00, 00 };
   memcpy( p, x, sizeof x );
-  p += 64; } //boot code and return stack area. stack pointer assumed well out of the way
+  p += 0x100; } //boot code and return stack area. stack pointer assumed well out of the way
 HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
 HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dovar, dovar, MOV(,R,BX,AX), LEA(,B,AX,BX_),2, PUSH(AX))
+CODE(execute,execute,  PUSHRSP(SI), MOV(,R,BX,AX), MOV(,R,SI,BX_),2)
 CODE(exit,  c_exit,    POPRSP(SI))
 CODE(emit,  emit,      POP(DX), MOVAXI(00,02), INT(21))
 CODE(key,   key,       MOVAXI(00,01), INT(21), PUSH(AX))
@@ -72,6 +74,7 @@ CODE(+!,    plusbang,  POP(BX), POP(AX), ADD(F,Z,AX,BX_))
 CODE(-!,    minusbang, POP(BX), POP(AX), SUB(F,Z,AX,BX_))
 CODE(type,  type,      POP(CX), POP(BX), MOVAXI(00,02), 
                        MOV(BYTE,Z,DL,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ,-10)
+//CODE(s=,    seq,       )
 CODE(bye,   bye,       HALT)
 WORD(0,       zero,      docon, 0)
 WORD(1,       one,       docon, 1)
@@ -95,6 +98,7 @@ WORD(.digits, dotdigits, enter,   swap, dotemit, oneminus,
 WORD(u.,      udot,      enter, dotexpand, dotdigits, space)
 WORD(.,       dot,       enter, dotsign, udot)
 WORD(ok,      ok,        enter, lit,'O',emit, lit,'K',emit, cr)
+WORD(dict,    dict,      enter, lit, 0)
 WORD(here,    here,      enter, lit, 0)
 WORD(allot,   allot,     enter, lit, here+4, plusbang)
 WORD(test0,   test0,     enter, zero, dot,
@@ -113,16 +117,20 @@ WORD(test4,   test4,     enter, var, dot, var, at, dot, ok)
 WORD(test5,   test5,     enter, ten, var, bang, var, at, dot, ok)
 WORD(test6,   test6,     enter, lit, 16, base, bang, var, dot, var, at, dot, ok)
 WORD(test7,   test7,     enter, lit, -10, udot, ok)
-WORD(test,    test,      enter, test0, cr,
-                                test1, cr,
-                                test2, cr,
-                                test2a, cr,
-                                test3, cr,
-                                test4, cr,
-                                test5, cr,
-                                test6, cr,
+WORD(ename,   ename,     enter,   dup, udot,
+                                dup, lit, 2, add, at, lit, 0xff, and,
+                                  dup, udot,
+                                swap, lit, 3, add, swap, type, cr)
+WORD(words,   words,     enter, dict,
+                                  dup, ename, at,
+                                  dup, zeq, zbranch, -7)
+WORD(test8,   test8,     enter, words, ok)
+WORD(test,    test,      enter, test0, cr, test1, cr, test2, cr, test2a, cr,
+                                test3, cr, test4, cr, test5, cr, test6, cr,
                                 test7, cr,
+                                test8, cr,
                                 bye)
+//WORD(find,    find,      enter, )
 int dummy = 0;
 CODE(interpret, interpret, JMPAX(dummy))
 CODE(accept,    accept,    JMPAX(interpret))
@@ -132,10 +140,11 @@ HEADLESS(quit,  quit,      MOVBPI( 0x00,0x20 ), JMPAX(accept))
 HEADLESS(abort, abort,     MOVSPI( 0x00,0xf0 ), JMPAX(quit))
 HEADLESS(cold,  cold,      JMPAX(abort))
 memcpy( start+here+4, (US[]){ p-start }, 2);
+memcpy( start+dict+4, (US[]){ link }, 2);
 memcpy( p, "Hello world!", 12 );
 nop_();
 US init = test + 2;
-{ UC x[] = { MOVBPI( 0x00,0x20 ), MOVSII(init%0x100,init/0x100), NEXT };
+{ UC x[] = { MOVBPI( 0x00,0x01 ), MOVSII(init%0x100,init/0x100), NEXT };
   memcpy( start, x, sizeof x ); }
 trace=0;
 return  0;}
