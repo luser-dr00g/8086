@@ -112,7 +112,7 @@ U decseg(U sr){         // decode segment register
             x=decreg(r.reg,w); \
             y=decrm(r,w); \
             if(trace>1){ P("x:%d ",x); P("y:%d ",y); } \
-            p=d?(void*)x:(void*)y; \
+            p=(void*)(d?x:y); \
             if(trace>1){ P("p:%d ",(U)p); }
 
     // fetch x and y values from x and y pointers
@@ -129,15 +129,16 @@ U decseg(U sr){         // decode segment register
            x=get_((void*)x,w); \
            y=w?fetchw():fetchb();
 
-#define SETPF *fl |= \
-            ((z&1)+!!(z&2)+!!(z&4)+!!(z&8)+!!(z&16)+!!(z&32)+!!(z&64)+!!(z&128))%2 \
-            ?0:PF; //count bits
-#define F(f) !!(*fl&f) //test flag bit
+#define SETPF wput(fl, \
+         wget(fl) | ( ((z)^(z>>1)^(z>>2)^(z>>3)^(z>>4)^(z>>5)^(z>>6)^(z>>7))&1 ?0:PF ) );
+#define F(f) !!(wget(fl)&f) //test flag bit
 
     // flags set by logical operators
-#define LOGFLAGS  *fl=0; \
-                  *fl |= ( (z&(w?0x8000:0x80))           ?SF:0) \
-                       | ( (z&(w?0xffff:0xff))==0        ?ZF:0) ;
+//#define LOGFLAGS  *fl=0; \
+//                  *fl |= ( (z&(w?0x8000:0x80))           ?SF:0) \
+//                       | ( (z&(w?0xffff:0xff))==0        ?ZF:0) ;
+#define LOGFLAGS  wput(fl, ( (z&(w?0x8000:0x80))           ?SF:0) \
+                         | ( (z&(w?0xffff:0xff))==0        ?ZF:0) );
 
     // additional flags set by math operators
 #define MATHFLAGS(Overflow) *fl |= ( (z&(w?0xffff0000:0xff00))     ?CF:0) \
