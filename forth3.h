@@ -25,7 +25,8 @@ trace=1;
 HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
 HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dovar, dovar, MOV(,R,BX,AX), LEA(,B,AX,BX_),2, PUSH(AX))
-CODE(execute,execute,  PUSHRSP(SI), MOV(,R,BX,AX), MOV(,R,SI,BX_),2)
+CODE(exec,   exec,     MOV(,R,BX,AX), PUSHRSP(SI), MOV(,R,SI,BX_),2)
+CODE(execute,execute,  POP(BX), MOV(,R,AX,BX), MOV(,B,BX,BX_),0, JMP_(R,BX))
 CODE(exit,   c_exit,   POPRSP(SI))
 CODE(emit,   emit,     POP(DX), MOVAXI(00,02), INT(21))
 CODE(key,    key,      MOVAXI(00,01), INT(21), XOR(,R,BX,BX), MOV(BYTE,R,BL,AL), PUSH(BX))
@@ -173,10 +174,15 @@ WORD(find,    find,      enter, latest, findloop,
                                 dup, zeq, not, zbranch, 1,
                                   ecode)
 WORD(test12,  test12,    enter, readline, find, dot, ok)
+WORD(test13,  test13,    enter, readline, find, dup, dot,
+                                dup, zeq, not, zbranch, 1,
+                                  execute,
+                                dot, ok)
 WORD(test,    test,      enter, test0, cr, test1, cr, test2, cr, test2a, cr,
                                 test3, cr, test4, cr, test5, cr, test6, cr,
                                 test7, cr, //test8, cr, test9, cr, test10, cr,
-                                test11, cr, test12, cr,
+                                test11, cr, //test12, cr,
+                                test13, cr,
                                 bye)
 int dummy = 0;
 CODE(interpret, interpret, JMPAX(dummy))
