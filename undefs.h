@@ -42,10 +42,15 @@
 #undef PUSH
 #undef ADDAX
 #undef LODS
+#undef CMPS
 #undef LAHF
 #undef NOT
 #undef NEG
 #undef JZ
+#undef JMP
+#undef sJMP
+#undef CLD
+#undef STD
 #undef HALT
 #undef INT
 #undef MOVAXI

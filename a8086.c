@@ -59,8 +59,6 @@ V bput(void*p,U x){ put_(p, x, 0); }
 V wput(void*p,U x){ put_(p, x, 1); }
 
 // get byte or word through cs:ip, incrementing ip
-//UC fetchb(){ U x = get_(mem+(*ip)++,0); if(trace)P("%02x(%03o) ",x,x); R x; }
-//UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); ++*ip; if(trace)P("%02x(%03o) ",x,x); R x; }
 U inc(US*p){ wput( p, 1 + wget( p ) ); }
 UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); inc(ip); if(trace)P("%02x(%03o) ",x,x); R x; }
 US fetchw(){I w=fetchb();R w|(fetchb()<<8);}
@@ -235,7 +233,10 @@ U decseg(U sr){         // decode segment register
              else { put_(mem+fetchw(),w?*ax:*al,w); }
 #define Offset (w+1)*(1-d*2) //(w,d)=? (0,0)=1 (1,0)=2 (0,1)=-1 (1,1)=-2
 #define MOVS put_(di,get_(si,w),w); *di+=Offset; *si+=Offset;
-#define CMPS x=(I)si; y=(I)di; LDXY CMP *di+=Offset; *si+=Offset;
+#define CMPS x=(U)(mem+wget(si)); y=(U)(mem+wget(di)); d=!!(*fl&DF);\
+             if(trace){ P("x:%d ",x); P("y:%d ",y); } \
+             LDXY \
+             CMP *di+=Offset; *si+=Offset;
 #define STOS put_(di,w?*ax:*al,w); *di+=Offset;
 #define LODS if(w) *ax=get_(mem+*si,w); else *al=get_(mem+*si,w); *si+=Offset;
 #define SCAS z=(x=w?*ax:*al)-(y=get_(di,w)); LOGFLAGS ADDFLAGS *di+=Offset;

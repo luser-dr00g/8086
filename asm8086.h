@@ -55,6 +55,7 @@
 #define POP(r)    0x58+r
 #define ADDAX     0x05
 #define LODS      0xad
+#define CMPS      0xa7
 #define JZ        0x74
 #define JNZ       0x75
 #define JS        0x78
@@ -63,11 +64,17 @@
 #define JGE       0x7D
 #define JLE       0x7E
 #define JG        0x7F
+#define JMP       0xE9
+#define sJMP      0xEB
 #define LAHF      0x9f
 #define HALT      0xF4
+#define CLD       0xfc
+#define STD       0xfd
 #define INT(no)   0xCD,0x##no
 #define MOVAXI(a,b) 0xb8,a,b
 #define MOVCXI(a,b) 0xb9,a,b
+#define MOVDXI(a,b) 0xba,a,b
+#define MOVBXI(a,b) 0xbb,a,b
 #define MOVSPI(a,b) 0xbc,a,b
 #define MOVBPI(a,b) 0xbd,a,b
 #define MOVSII(a,b) 0xbe,a,b

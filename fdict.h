@@ -1,6 +1,6 @@
 typedef unsigned char UC;
 typedef unsigned short US;
-enum { MAX_NAME = 9, MAX_CODE_PARAM = 30, MAX_WORD_PARAM = 30 };
+enum { MAX_NAME = 9, MAX_CODE_PARAM = 40, MAX_WORD_PARAM = 30 };
 
 struct code_entry {
   US link;

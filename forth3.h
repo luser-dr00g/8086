@@ -18,7 +18,7 @@ static inline int
 forth(char *start){
 char *p = start;
 unsigned link = 0;
-trace=1;
+trace=0;
 { UC x[] = { HALT, 00, 00 };
   memcpy( p, x, sizeof x );
   p += 0x100; } //boot code and return stack area. stack pointer assumed well out of the way
@@ -26,56 +26,56 @@ HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
 HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dovar, dovar, MOV(,R,BX,AX), LEA(,B,AX,BX_),2, PUSH(AX))
 CODE(execute,execute,  PUSHRSP(SI), MOV(,R,BX,AX), MOV(,R,SI,BX_),2)
-CODE(exit,  c_exit,    POPRSP(SI))
-CODE(emit,  emit,      POP(DX), MOVAXI(00,02), INT(21))
-CODE(key,   key,       MOVAXI(00,01), INT(21), PUSH(AX))
+CODE(exit,   c_exit,   POPRSP(SI))
+CODE(emit,   emit,     POP(DX), MOVAXI(00,02), INT(21))
+CODE(key,    key,      MOVAXI(00,01), INT(21), XOR(,R,BX,BX), MOV(BYTE,R,BL,AL), PUSH(BX))
 CODE(0branch,zbranch,  POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JNZ,2, ADD(,R,SI,AX))
-CODE(branch,branch,    LODS, SHL(R,AX), ADD(,R,SI,AX))
-CODE(lit,   lit,       LODS, PUSH(AX))
-CODE(dup,   dup,       POP(AX), PUSH(AX), PUSH(AX))
-CODE(drop,  drop,      POP(AX))
-CODE(swap,  swap,      POP(AX), POP(BX), PUSH(AX), PUSH(BX))
-CODE(over,  over,      MOV(,R,BX,SP), MOV(,B,AX,BX_),2, PUSH(AX))
-CODE(rot,   rot,       POP(AX), POP(BX), POP(CX), PUSH(BX), PUSH(AX), PUSH(CX))
-CODE(-dup,  minusdup,  POP(AX), OR(,R,AX,AX), JZ,1,PUSH(AX), PUSH(AX))
-CODE(-rot,  nrot,      POP(AX), POP(BX), POP(CX), PUSH(AX), PUSH(CX), PUSH(BX))
-CODE(>r,    to_r,      POP(AX), PUSHRSP(AX))
-CODE(r>,    from_r,    POPRSP(AX), PUSH(AX))
-CODE(r,     r,         MOV(,B,AX,BP_),0, PUSH(AX))
-CODE(2drop, twodrop,   POP(AX), POP(AX))
-CODE(2dup,  twodup,    MOV(,R,BX,SP),MOV(,B,AX,BX_),0, MOV(,B,CX,BX_),2, PUSH(AX),PUSH(CX))
-CODE(0=,    zeq,       POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JZ,2,INC_(R,AX), PUSH(AX))
-CODE(0<,    zless,     POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JL,2,INC_(R,AX), PUSH(AX))
-CODE(0>,    zmore,     POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JG,2,INC_(R,AX), PUSH(AX))
-CODE(<,     less,      POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JL,2,INC_(R,AX),PUSH(AX))
-CODE(>,     more,      POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JG,2,INC_(R,AX),PUSH(AX))
-CODE(not,   not,       POP(AX), NOT(R,AX), PUSH(AX))
-CODE(1+,    oneplus,   MOV(,R,BX,SP), INC_(B,BX_),0)
-CODE(1-,    oneminus,  MOV(,R,BX,SP), DEC_(B,BX_),0)
-CODE(+,     add,       POP(AX), POP(BX), ADD(,R,AX,BX), PUSH(AX))
-CODE(-,     sub,       POP(AX), MOV(,R,BX,SP), SUB(F,B,AX,BX_),0)
-CODE(*,     mul,       POP(AX), POP(BX), IMUL(R,BX), PUSH(AX))
-CODE(/,     div,       POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(AX))
-CODE(mod,   mod,       POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(DX))
-CODE(/mod,  divmod,    POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(DX), PUSH(AX))
-CODE(u/mod, udivmod,   POP(BX), XOR(,R,DX,DX), POP(AX), DIV(R,BX), PUSH(DX), PUSH(AX))
-CODE(*/mod, muldivmod, POP(CX), POP(BX), POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(DX), PUSH(AX))
-CODE(*/,    muldiv,    POP(CX), POP(BX), POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(AX))
-CODE(max,   max,       POP(BX), POP(AX), CMP(,R,AX,BX), JL,2, MOV(,R,AX,BX), PUSH(AX))
-CODE(min,   min,       POP(BX), POP(AX), CMP(,R,AX,BX), JG,2, MOV(,R,AX,BX), PUSH(AX))
-CODE(abs,   abs,       POP(AX), OR(,R,AX,AX), JGE,2, NEG(R,AX), PUSH(AX))
-CODE(minus, minus,     POP(AX), NEG(R,AX), PUSH(AX))
-CODE(and,   and,       POP(BX), POP(AX), AND(,R,AX,BX), PUSH(AX))
-CODE(or,    or,        POP(BX), POP(AX), OR(,R,AX,BX), PUSH(AX))
-CODE(xor,   xor,       POP(BX), POP(AX), XOR(,R,AX,BX), PUSH(AX))
-CODE(!,     bang,      POP(BX), POP(AX), MOV(F,Z,AX,BX_))
-CODE(@,     at,        POP(BX), MOV(,Z,AX,BX_), PUSH(AX))
-CODE(+!,    plusbang,  POP(BX), POP(AX), ADD(F,Z,AX,BX_))
-CODE(-!,    minusbang, POP(BX), POP(AX), SUB(F,Z,AX,BX_))
-CODE(type,  type,      POP(CX), POP(BX), MOVAXI(00,02), 
+CODE(branch, branch,   LODS, SHL(R,AX), ADD(,R,SI,AX))
+CODE(lit,    lit,      LODS, PUSH(AX))
+CODE(dup,    dup,      POP(AX), PUSH(AX), PUSH(AX))
+CODE(drop,   drop,     POP(AX))
+CODE(swap,   swap,     POP(AX), POP(BX), PUSH(AX), PUSH(BX))
+CODE(over,   over,     MOV(,R,BX,SP), MOV(,B,AX,BX_),2, PUSH(AX))
+CODE(rot,    rot,      POP(AX), POP(BX), POP(CX), PUSH(BX), PUSH(AX), PUSH(CX))
+CODE(-dup,   minusdup, POP(AX), OR(,R,AX,AX), JZ,1,PUSH(AX), PUSH(AX))
+CODE(-rot,   nrot,     POP(AX), POP(BX), POP(CX), PUSH(AX), PUSH(CX), PUSH(BX))
+CODE(>r,     to_r,     POP(AX), PUSHRSP(AX))
+CODE(r>,     from_r,   POPRSP(AX), PUSH(AX))
+CODE(r,      r,        MOV(,B,AX,BP_),0, PUSH(AX))
+CODE(2drop,  twodrop,  POP(AX), POP(AX))
+CODE(2dup,   twodup,   MOV(,R,BX,SP),MOV(,B,AX,BX_),0, MOV(,B,CX,BX_),2, PUSH(CX),PUSH(AX))
+CODE(0=,     zeq,      POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JZ,2,INC_(R,AX), PUSH(AX))
+CODE(0<,     zless,    POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JL,2,INC_(R,AX), PUSH(AX))
+CODE(0>,     zmore,    POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JG,2,INC_(R,AX), PUSH(AX))
+CODE(=,      eq,       POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JZ,2,INC_(R,AX),PUSH(AX))
+CODE(<,      less,     POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JL,2,INC_(R,AX),PUSH(AX))
+CODE(>,      more,     POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JG,2,INC_(R,AX),PUSH(AX))
+CODE(not,    not,      POP(AX), NOT(R,AX), PUSH(AX))
+CODE(1+,     oneplus,  MOV(,R,BX,SP), INC_(B,BX_),0)
+CODE(1-,     oneminus, MOV(,R,BX,SP), DEC_(B,BX_),0)
+CODE(+,      add,      POP(AX), POP(BX), ADD(,R,AX,BX), PUSH(AX))
+CODE(-,      sub,      POP(AX), MOV(,R,BX,SP), SUB(F,B,AX,BX_),0)
+CODE(*,      mul,      POP(AX), POP(BX), IMUL(R,BX), PUSH(AX))
+CODE(/,      div,      POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(AX))
+CODE(mod,    mod,      POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(DX))
+CODE(/mod,   divmod,   POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(DX), PUSH(AX))
+CODE(u/mod,  udivmod,  POP(BX), XOR(,R,DX,DX), POP(AX), DIV(R,BX), PUSH(DX), PUSH(AX))
+CODE(*/mod,  muldivmod,POP(CX), POP(BX), POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(DX), PUSH(AX))
+CODE(*/,     muldiv,   POP(CX), POP(BX), POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(AX))
+CODE(max,    max,      POP(BX), POP(AX), CMP(,R,AX,BX), JL,2, MOV(,R,AX,BX), PUSH(AX))
+CODE(min,    min,      POP(BX), POP(AX), CMP(,R,AX,BX), JG,2, MOV(,R,AX,BX), PUSH(AX))
+CODE(abs,    abs,      POP(AX), OR(,R,AX,AX), JGE,2, NEG(R,AX), PUSH(AX))
+CODE(minus,  minus,    POP(AX), NEG(R,AX), PUSH(AX))
+CODE(and,    and,      POP(BX), POP(AX), AND(,R,AX,BX), PUSH(AX))
+CODE(or,     or,       POP(BX), POP(AX), OR(,R,AX,BX), PUSH(AX))
+CODE(xor,    xor,      POP(BX), POP(AX), XOR(,R,AX,BX), PUSH(AX))
+CODE(!,      bang,     POP(BX), POP(AX), MOV(F,Z,AX,BX_))
+CODE(@,      at,       POP(BX), MOV(,Z,AX,BX_), PUSH(AX))
+CODE(+!,     plusbang, POP(BX), POP(AX), ADD(F,Z,AX,BX_))
+CODE(-!,     minusbang,POP(BX), POP(AX), SUB(F,Z,AX,BX_))
+CODE(type,   type,     POP(CX), POP(BX), MOVAXI(00,02), 
                        MOV(BYTE,Z,DL,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ,-10)
-//CODE(s=,    seq,       )
-CODE(bye,   bye,       HALT)
+CODE(bye,    bye,      HALT)
 WORD(0,       zero,      docon, 0)
 WORD(1,       one,       docon, 1)
 WORD(10,      ten,       docon, 10)
@@ -117,18 +117,39 @@ WORD(test4,   test4,     enter, var, dot, var, at, dot, ok)
 WORD(test5,   test5,     enter, ten, var, bang, var, at, dot, ok)
 WORD(test6,   test6,     enter, lit, 16, base, bang, var, dot, var, at, dot, ok)
 WORD(test7,   test7,     enter, lit, -10, udot, ok)
-WORD(ename,   ename,     enter,   dup, udot,
+WORD(ename,   ename,     enter,   //dup, udot,
                                 dup, lit, 2, add, at, lit, 0xff, and,
-                                  dup, udot,
-                                swap, lit, 3, add, swap, type, cr)
-WORD(words,   words,     enter, dict,
-                                  dup, ename, at,
-                                  dup, zeq, zbranch, -7)
+                                  //dup, udot,
+                                swap, lit, 3, add, swap)
+WORD(words,   words,     enter, zero, dict,
+                                  swap, dup, udot, oneplus, swap,
+                                  dup, ename, type, cr, 
+                                  at,
+                                  dup, zeq, zbranch, -12,
+                                drop, drop)
 WORD(test8,   test8,     enter, words, ok)
-WORD(test,    test,      enter, test0, cr, test1, cr, test2, cr, test2a, cr,
-                                test3, cr, test4, cr, test5, cr, test6, cr,
-                                test7, cr,
-                                test8, cr,
+WORD(readline,readline,  enter, here, dup,
+                                  key, //dup, udot,
+                                  swap, twodup, bang,
+                                  oneplus, swap,
+                                  ten, eq, zbranch, -10,//-12,
+                                over, sub, oneminus, key, drop)
+WORD(test9,   test9,     enter, readline, //twodup, udot, udot,
+                                type, ok)
+CODE(s=,      seq,       POP(CX), POP(DX), POP(BX), POP(AX), PUSH(SI), STD,
+                         CMP(,R,CX,BX), MOVBXI(0xff,0xff), JZ, 4, 
+                           INC_(R,BX), sJMP, 11,        //(4)
+                         MOV(,R,SI,AX), MOV(,R,DI,DX),  //(4)
+                           BYTE+CMPS, JNZ, -11,         //(3)
+                           DEC_(R,CX), JNZ, -7,         //(4)
+                         POP(SI), PUSH(BX))
+WORD(test10,  test10,    enter, readline, twodup, dup, dot, type, space,
+                                dict, ename, twodup, dup, dot, type, space, 
+                                seq, dot, cr)
+WORD(test,    test,      enter, //test0, cr, test1, cr, test2, cr, test2a, cr,
+                                //test3, cr, test4, cr, test5, cr, test6, cr,
+                                //test7, cr,
+                                test10, cr,
                                 bye)
 //WORD(find,    find,      enter, )
 int dummy = 0;
