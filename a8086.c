@@ -69,19 +69,19 @@ void interrupt( UC no ){
   CASE 0x21: switch(bget(ah)){
              CASE 0x01: bput(al, getchar());
              CASE 0x02: putchar(bget(dl)); bput(al,bget(dl)); if(bget(al)=='\t')bput(al,' ');
-	     CASE 0x09: f=*dx; while(mem[f]!='$')putchar(mem[f++]); bput(al,'$');
+	     CASE 0x09: f=wget(dx); while(mem[f]!='$')putchar(mem[f++]); bput(al,'$');
 	     CASE 0x2A: {time_t t=time(NULL);struct tm*tm=localtime(&t);
-	                 *cx=tm->tm_year;
-                         *dh=tm->tm_mon;
-                         *dl=tm->tm_mday;
-                         *al=tm->tm_wday;}
+	                 wput(cx,tm->tm_year);
+                         wput(dh,tm->tm_mon);
+                         wput(dl,tm->tm_mday);
+                         wput(al,tm->tm_wday);}
 	     CASE 0x2C: {struct timeval tv;gettimeofday(&tv,0);
                          time_t t=time(NULL);struct tm*tm=localtime(&t);
-                         *ch=tm->tm_hour;
-                         *cl=tm->tm_min;
-                         *dh=tm->tm_sec;
-                         *dl=tv.tv_usec/10;}
-	     CASE 0x4C: exit(*al);
+                         bput(ch,tm->tm_hour);
+                         bput(cl,tm->tm_min);
+                         bput(dh,tm->tm_sec);
+                         bput(dl,tv.tv_usec/10);}
+	     CASE 0x4C: exit(wget(al));
              }}}
 
 T struct rm{U mod,reg,r_m;}rm;      // the three fields of the mod-reg-r/m byte
@@ -264,8 +264,8 @@ U decseg(U sr){         // decode segment register
 	      CASE 5: SHR ; \
               CASE 7: SAR ; \
               }
-#define ROL
-#define ROR
+#define ROL z=y<<1|w?(y&0x8000)>>15:(y&0x80)>>7;
+#define ROR z=y>>1|w?(y&1)<<15:(y&1)<<7;
 #define RCL
 #define RCR
 #define SHL z=y<<1; RESULT
