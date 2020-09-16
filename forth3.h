@@ -18,7 +18,7 @@ static inline int
 forth(char *start){
 char *p = start;
 unsigned link = 0;
-trace=0;
+trace=1;
 { UC x[] = { HALT, 00, 00 };
   memcpy( p, x, sizeof x );
   p += 0x100; } //boot code and return stack area. stack pointer assumed well out of the way
@@ -36,6 +36,7 @@ CODE(dup,    dup,      POP(AX), PUSH(AX), PUSH(AX))
 CODE(drop,   drop,     POP(AX))
 CODE(swap,   swap,     POP(AX), POP(BX), PUSH(AX), PUSH(BX))
 CODE(over,   over,     MOV(,R,BX,SP), MOV(,B,AX,BX_),2, PUSH(AX))
+CODE(pick,   pick,     POP(BX), SHL(R,BX), MOV(,R,DI,SP), MOV(,Z,AX,BX_DI), PUSH(AX))
 CODE(rot,    rot,      POP(AX), POP(BX), POP(CX), PUSH(BX), PUSH(AX), PUSH(CX))
 CODE(-dup,   minusdup, POP(AX), OR(,R,AX,AX), JZ,1,PUSH(AX), PUSH(AX))
 CODE(-rot,   nrot,     POP(AX), POP(BX), POP(CX), PUSH(AX), PUSH(CX), PUSH(BX))
@@ -44,6 +45,8 @@ CODE(r>,     from_r,   POPRSP(AX), PUSH(AX))
 CODE(r,      r,        MOV(,B,AX,BP_),0, PUSH(AX))
 CODE(2drop,  twodrop,  POP(AX), POP(AX))
 CODE(2dup,   twodup,   MOV(,R,BX,SP),MOV(,B,AX,BX_),0, MOV(,B,CX,BX_),2, PUSH(CX),PUSH(AX))
+CODE(3dup,   threedup, MOV(,R,BX,SP),MOV(,B,AX,BX_),0, MOV(,B,CX,BX_),2, MOV(,B,DX,BX_),4,
+                        PUSH(DX), PUSH(CX), PUSH(AX))
 CODE(0=,     zeq,      POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JZ,2,INC_(R,AX), PUSH(AX))
 CODE(0<,     zless,    POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JL,2,INC_(R,AX), PUSH(AX))
 CODE(0>,     zmore,    POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JG,2,INC_(R,AX), PUSH(AX))
@@ -78,6 +81,10 @@ CODE(type,   type,     POP(CX), POP(BX), MOVAXI(00,02),
 CODE(bye,    bye,      HALT)
 WORD(0,       zero,      docon, 0)
 WORD(1,       one,       docon, 1)
+WORD(2,       two,       docon, 2)
+WORD(3,       three,     docon, 3)
+WORD(4,       four,      docon, 4)
+WORD(5,       five,      docon, 5)
 WORD(10,      ten,       docon, 10)
 WORD(var,     var,       dovar, 42)
 WORD(base,    base,      dovar, 10)
@@ -121,6 +128,7 @@ WORD(ename,   ename,     enter,   //dup, udot,
                                 dup, lit, 2, add, at, lit, 0xff, and,
                                   //dup, udot,
                                 swap, lit, 3, add, swap)
+WORD(ecode,   ecode,     enter, lit, offsetof( struct code_entry, code ), add)
 WORD(words,   words,     enter, zero, dict,
                                   swap, dup, udot, oneplus, swap,
                                   dup, ename, type, cr, 
@@ -146,12 +154,25 @@ CODE(s=,      seq,       POP(CX), POP(DX), POP(BX), POP(AX), PUSH(SI), STD,
 WORD(test10,  test10,    enter, readline, twodup, dup, dot, type, space,
                                 dict, ename, twodup, dup, dot, type, space, 
                                 seq, dot, cr)
-WORD(test,    test,      enter, //test0, cr, test1, cr, test2, cr, test2a, cr,
-                                //test3, cr, test4, cr, test5, cr, test6, cr,
-                                //test7, cr,
-                                test10, cr,
+WORD(test11,  test11,    enter, five, four, three, two, one,
+                                zero, pick, dot,
+                                one, pick, dot,
+                                two, pick, dot, ok)
+WORD(find,    find,      enter, dict, nrot, 
+                                  threedup, rot, ename, //(3)
+                                  twodup, type, space,  //(3)
+                                  seq, not, zbranch, 10, //(4)
+                                  rot, at, dup, zeq, not, zbranch, 6, //(7)
+                                  nrot, branch, -20,  //(3)
+                                  drop, drop, c_exit, //(3)
+                                  drop, drop, drop, zero)
+WORD(test12,  test12,    enter, readline, twodup, dup, dot, type, space,
+                                find, ecode, dot, ok)
+WORD(test,    test,      enter, test0, cr, test1, cr, test2, cr, test2a, cr,
+                                test3, cr, test4, cr, test5, cr, test6, cr,
+                                test7, cr, //test8, cr, test9, cr, test10, cr,
+                                test11, cr, test12, cr,
                                 bye)
-//WORD(find,    find,      enter, )
 int dummy = 0;
 CODE(interpret, interpret, JMPAX(dummy))
 CODE(accept,    accept,    JMPAX(interpret))
