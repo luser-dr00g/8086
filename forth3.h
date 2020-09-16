@@ -105,7 +105,7 @@ WORD(.digits, dotdigits, enter,   swap, dotemit, oneminus,
 WORD(u.,      udot,      enter, dotexpand, dotdigits, space)
 WORD(.,       dot,       enter, dotsign, udot)
 WORD(ok,      ok,        enter, lit,'O',emit, lit,'K',emit, cr)
-WORD(dict,    dict,      enter, lit, 0)
+WORD(latest,  latest,    enter, lit, 0)
 WORD(here,    here,      enter, lit, 0)
 WORD(allot,   allot,     enter, lit, here+4, plusbang)
 WORD(test0,   test0,     enter, zero, dot,
@@ -129,9 +129,9 @@ WORD(ename,   ename,     enter,   //dup, udot,
                                   //dup, udot,
                                 swap, lit, 3, add, swap)
 WORD(ecode,   ecode,     enter, lit, offsetof( struct code_entry, code ), add)
-WORD(words,   words,     enter, zero, dict,
+WORD(words,   words,     enter, zero, latest,
                                   swap, dup, udot, oneplus, swap,
-                                  dup, ename, type, cr, 
+                                  dup, ename, type, space,
                                   at,
                                   dup, zeq, zbranch, -12,
                                 drop, drop)
@@ -152,22 +152,27 @@ CODE(s=,      seq,       POP(CX), POP(DX), POP(BX), POP(AX), PUSH(SI), STD,
                            DEC_(R,CX), JNZ, -7,         //(4)
                          POP(SI), PUSH(BX))
 WORD(test10,  test10,    enter, readline, twodup, dup, dot, type, space,
-                                dict, ename, twodup, dup, dot, type, space, 
+                                latest, ename, twodup, dup, dot, type, space, 
                                 seq, dot, cr)
 WORD(test11,  test11,    enter, five, four, three, two, one,
                                 zero, pick, dot,
                                 one, pick, dot,
                                 two, pick, dot, ok)
-WORD(find,    find,      enter, dict, nrot, 
+WORD(findloop,findloop,  enter, nrot, 
                                   threedup, rot, ename, //(3)
-                                  twodup, type, space,  //(3)
+                                  //twodup, type, space,  //(3)
                                   seq, not, zbranch, 10, //(4)
                                   rot, at, dup, zeq, not, zbranch, 6, //(7)
-                                  nrot, branch, -20,  //(3)
-                                  drop, drop, c_exit, //(3)
+                                  nrot, branch, 
+                                                //-3
+                                                -17,  //(3)
+                                  drop, drop,
+                                c_exit, //(3)
                                   drop, drop, drop, zero)
-WORD(test12,  test12,    enter, readline, twodup, dup, dot, type, space,
-                                find, ecode, dot, ok)
+WORD(find,    find,      enter, latest, findloop,
+                                dup, zeq, not, zbranch, 1,
+                                  ecode)
+WORD(test12,  test12,    enter, readline, find, dot, ok)
 WORD(test,    test,      enter, test0, cr, test1, cr, test2, cr, test2a, cr,
                                 test3, cr, test4, cr, test5, cr, test6, cr,
                                 test7, cr, //test8, cr, test9, cr, test10, cr,
@@ -182,7 +187,7 @@ HEADLESS(quit,  quit,      MOVBPI( 0x00,0x20 ), JMPAX(accept))
 HEADLESS(abort, abort,     MOVSPI( 0x00,0xf0 ), JMPAX(quit))
 HEADLESS(cold,  cold,      JMPAX(abort))
 memcpy( start+here+4, (US[]){ p-start }, 2);
-memcpy( start+dict+4, (US[]){ link }, 2);
+memcpy( start+latest+4, (US[]){ link }, 2);
 memcpy( p, "Hello world!", 12 );
 nop_();
 US init = test + 2;
