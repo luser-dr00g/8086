@@ -33,6 +33,7 @@ CODE(key,    key,      MOVAXI(00,01), INT(21), XOR(,R,BX,BX), MOV(BYTE,R,BL,AL),
 CODE(0branch,zbranch,  POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JNZ,2, ADD(,R,SI,AX))
 CODE(branch, branch,   LODS, SHL(R,AX), ADD(,R,SI,AX))
 CODE(lit,    lit,      LODS, PUSH(AX))
+CODE(depth,  depth,    MOVAXI(0x00,0xf0), MOV(,R,BX,SP), SUB(,R,AX,BX),SHR(R,AX), PUSH(AX))
 CODE(dup,    dup,      POP(AX), PUSH(AX), PUSH(AX))
 CODE(drop,   drop,     POP(AX))
 CODE(swap,   swap,     POP(AX), POP(BX), PUSH(AX), PUSH(BX))
@@ -48,6 +49,7 @@ CODE(2drop,  twodrop,  POP(AX), POP(AX))
 CODE(2dup,   twodup,   POP(BX), POP(AX), PUSH(AX), PUSH(BX), PUSH(AX), PUSH(BX))
 CODE(3dup,   threedup, POP(CX), POP(BX), POP(AX),
                        PUSH(AX), PUSH(BX), PUSH(CX), PUSH(AX), PUSH(BX), PUSH(CX))
+CODE(2swap,  twoswap,  POP(DX),POP(CX),POP(BX),POP(AX),PUSH(CX),PUSH(DX),PUSH(AX),PUSH(BX))
 CODE(0=,     zeq,      POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JZ,2,INC_(R,AX), PUSH(AX))
 CODE(0<,     zless,    POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JL,2,INC_(R,AX), PUSH(AX))
 CODE(0>,     zmore,    POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JG,2,INC_(R,AX), PUSH(AX))
@@ -216,10 +218,10 @@ WORD(error,   error,     enter, lit, 'E', emit, lit, 'R', emit, lit, 'R', emit, 
 WORD(intrp,   intrp,     enter, readline,
                                   parse, //twodup, type, space,      //(1/4)
                                   dup, zmore, zbranch, 14,         //(4)
-                                  find, dup, zeq, not, zbranch, 9, //(6)
+                                  find, dup, zeq, not, zbranch, 11, //(6)
                                   nrot, to_r, to_r, execute, from_r, from_r, //(6)
                                   branch, -19, //(2)
-                                c_exit,
+                                twodrop, twodrop, c_exit, //(3)
                                   error)
 WORD(test15,  test15,    enter, intrp, ok, branch, -4)
 WORD(test,    test,      enter,

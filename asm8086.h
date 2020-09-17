@@ -41,6 +41,7 @@
 #define           BH 7
 #define TEST(m,r,r_m) 0x85,MRM(m,r,r_m)
 #define SHL(m,   r_m) 0xd1,MRM(m,4,r_m) 
+#define SHR(m,   r_m) 0xd1,MRM(m,5,r_m)
 #define SHRC(m,  r_m) 0xd3,MRM(m,5,r_m)
 #define NOT(m,   r_m) 0xf7,MRM(m,2,r_m)
 #define NEG(m,   r_m) 0xf7,MRM(m,3,r_m)

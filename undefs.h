@@ -38,6 +38,7 @@
 #undef DEC_
 #undef JMP_
 #undef SHL
+#undef SHR
 #undef POP
 #undef PUSH
 #undef ADDAX

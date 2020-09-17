@@ -134,9 +134,6 @@ U decseg(U sr){         // decode segment register
 #define F(f) !!(wget(fl)&f) //test flag bit
 
     // flags set by logical operators
-//#define LOGFLAGS  *fl=0; \
-//                  *fl |= ( (z&(w?0x8000:0x80))           ?SF:0) \
-//                       | ( (z&(w?0xffff:0xff))==0        ?ZF:0) ;
 #define LOGFLAGS  wput(fl, ( (z&(w?0x8000:0x80))           ?SF:0) \
                          | ( (z&(w?0xffff:0xff))==0        ?ZF:0) );
 
@@ -146,7 +143,7 @@ U decseg(U sr){         // decode segment register
                                 | ( ((x^y^z)&0x10)                ?AF:0); \
                                 SETPF
 
-#define ADDFLAGS MATHFLAGS( ((z^x)&(z^y)&(w?0x8000:0x80)) ?OF:0)
+#define ADDFLAGS MATHFLAGS( ((    z  ^x)&(z^y)&(w?0x8000:0x80)) ?OF:0)
 #define SUBFLAGS MATHFLAGS( (((d?x:y)^z)&(x^y)&(w?0x8000:0x80)) ?OF:0)
 
 #define MULFLAGS  *fl &= ~(CF|OF); \
