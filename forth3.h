@@ -8,9 +8,8 @@
 #define PUSHRSP(r) 	LEA(,B,BP,BP_),minus(4), MOV(F,B,r,BP_),0
 #define POPRSP(r)  	MOV(,B,r,BP_),0, LEA(,B,BP,BP_),4
 #define minus(x)	1+(0xff^x)
-#define MOVAX( val )    MOVAXI( (val)%0x100, (val)/0x100 )
-#define JMPAX( addr )   MOVAX(addr), JMP_(R,AX)
-#define PUSHAX( val )   MOVAX(val), PUSH(AX)
+#define JMPAX( addr )   MOVAXI(addr), JMP_(R,AX)
+#define PUSHAX( val )   MOVAXI(val), PUSH(AX)
 
 static inline void nop_(){}
 
@@ -25,16 +24,15 @@ trace=0;
 HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
 HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dovar, dovar, MOV(,R,BX,AX), LEA(,B,AX,BX_),2, PUSH(AX))
-CODE(exec,   exec,     MOV(,R,BX,AX), PUSHRSP(SI), MOV(,R,SI,BX_),2)
 CODE(execute,execute,  POP(BX), MOV(,R,AX,BX), MOV(,B,BX,BX_),0, JMP_(R,BX))
 CODE(exit,   c_exit,   POPRSP(SI))
-CODE(emit,   emit,     POP(DX), MOVAXI(00,02), INT(21))
-CODE(key,    key,      MOVAXI(00,01), INT(21), XOR(,R,BX,BX), MOV(BYTE,R,BL,AL), PUSH(BX))
+CODE(emit,   emit,     POP(DX), MOVAXI(0x0200), INT(21))
+CODE(key,    key,      MOVAXI(0x0100), INT(21), XOR(,R,BX,BX), MOV(BYTE,R,BL,AL), PUSH(BX))
 CODE(0branch,zbranch,  POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JNZ,2, ADD(,R,SI,AX))
 CODE(branch, branch,   LODS, SHL(R,AX), ADD(,R,SI,AX))
 CODE(1branch,onbranch, POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JZ, 2, ADD(,R,SI,AX))
 CODE(lit,    lit,      LODS, PUSH(AX))
-CODE(depth,  depth,    MOVAXI(0x00,0xf0), MOV(,R,BX,SP), SUB(,R,AX,BX),SHR(R,AX), PUSH(AX))
+CODE(depth,  depth,    MOVAXI(0xf000), MOV(,R,BX,SP), SUB(,R,AX,BX),SHR(R,AX), PUSH(AX))
 CODE(dup,    dup,      POP(AX), PUSH(AX), PUSH(AX))
 CODE(drop,   drop,     POP(AX))
 CODE(swap,   swap,     POP(AX), POP(BX), PUSH(AX), PUSH(BX))
@@ -51,12 +49,12 @@ CODE(2dup,   twodup,   POP(BX), POP(AX), PUSH(AX), PUSH(BX), PUSH(AX), PUSH(BX))
 CODE(3dup,   threedup, POP(CX), POP(BX), POP(AX),
                        PUSH(AX), PUSH(BX), PUSH(CX), PUSH(AX), PUSH(BX), PUSH(CX))
 CODE(2swap,  twoswap,  POP(DX),POP(CX),POP(BX),POP(AX),PUSH(CX),PUSH(DX),PUSH(AX),PUSH(BX))
-CODE(0=,     zeq,      POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JZ,2,INC_(R,AX), PUSH(AX))
-CODE(0<,     zless,    POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JL,2,INC_(R,AX), PUSH(AX))
-CODE(0>,     zmore,    POP(BX), MOVAXI(0xff,0xff), OR(,R,BX,BX), JG,2,INC_(R,AX), PUSH(AX))
-CODE(=,      eq,   POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JZ,2,INC_(R,AX),PUSH(AX))
-CODE(<,      less, POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JL,2,INC_(R,AX),PUSH(AX))
-CODE(>,      more, POP(CX),POP(BX),MOVAXI(0xff,0xff),CMP(,R,BX,CX),JG,2,INC_(R,AX),PUSH(AX))
+CODE(0=,     zeq,      POP(BX), MOVAXI(0xffff), OR(,R,BX,BX), JZ,2,INC_(R,AX), PUSH(AX))
+CODE(0<,     zless,    POP(BX), MOVAXI(0xffff), OR(,R,BX,BX), JL,2,INC_(R,AX), PUSH(AX))
+CODE(0>,     zmore,    POP(BX), MOVAXI(0xffff), OR(,R,BX,BX), JG,2,INC_(R,AX), PUSH(AX))
+CODE(=,      eq,   POP(CX),POP(BX),MOVAXI(0xffff),CMP(,R,BX,CX),JZ,2,INC_(R,AX),PUSH(AX))
+CODE(<,      less, POP(CX),POP(BX),MOVAXI(0xffff),CMP(,R,BX,CX),JL,2,INC_(R,AX),PUSH(AX))
+CODE(>,      more, POP(CX),POP(BX),MOVAXI(0xffff),CMP(,R,BX,CX),JG,2,INC_(R,AX),PUSH(AX))
 CODE(not,    not,      POP(AX), NOT(R,AX), PUSH(AX))
 CODE(1+,     oneplus,  MOV(,R,BX,SP), INC_(B,BX_),0)
 CODE(1-,     oneminus, MOV(,R,BX,SP), DEC_(B,BX_),0)
@@ -80,11 +78,11 @@ CODE(!,      bang,     POP(BX), POP(AX), MOV(F,Z,AX,BX_))
 CODE(@,      at,       POP(BX), MOV(,Z,AX,BX_), PUSH(AX))
 CODE(+!,     plusbang, POP(BX), POP(AX), ADD(F,Z,AX,BX_))
 CODE(-!,     minusbang,POP(BX), POP(AX), SUB(F,Z,AX,BX_))
-CODE(type,   type,     POP(CX), POP(BX), MOVAXI(00,02), 
+CODE(type,   type,     POP(CX), POP(BX), MOVAXI(0x0200), 
                        OR(,R,CX,CX), JLE, 10,
                        MOV(BYTE,Z,DL,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ, -10)
 CODE(s=,     seq,      POP(CX), POP(DX), POP(BX), POP(AX), PUSH(SI), STD,
-                       CMP(,R,CX,BX), MOVBXI(0xff,0xff), JZ, 4, 
+                       CMP(,R,CX,BX), MOVBXI(0xffff), JZ, 4, 
                          INC_(R,BX), sJMP, 11,        //(4)
                        MOV(,R,SI,AX), MOV(,R,DI,DX),  //(4)
                          BYTE+CMPS, JNZ, -11,         //(3)
@@ -260,19 +258,20 @@ WORD(test,    test,      enter,
                                 test15,
                                 bye)
 int dummy = 0;
-CODE(interpret, interpret, JMPAX(dummy))
-CODE(accept,    accept,    JMPAX(interpret))
+//CODE(interpret, interpret, JMPAX(dummy))
+//CODE(accept,    accept,    JMPAX(interpret+2))
   //UC patch[] = { JMPAX(accept) }; memcpy(start+interpret, patch, sizeof patch );
-  memcpy(start+interpret+1, (US[]){ accept }, sizeof(US));
-HEADLESS(quit,  quit,      MOVBPI( 0x00,0x20 ), JMPAX(accept))
-HEADLESS(abort, abort,     MOVSPI( 0x00,0xf0 ), JMPAX(quit))
+  //memcpy(start+interpret+1, (US[]){ accept+2 }, sizeof(US));
+CODE(accept,    accept,    MOVSII(test15))
+HEADLESS(quit,  quit,      MOVBPI(0x0100), JMPAX(accept+2))
+HEADLESS(abort, abort,     MOVSPI(0xf000), JMPAX(quit))
 HEADLESS(cold,  cold,      JMPAX(abort))
 memcpy( start+here+2, (US[]){ p-start }, 2);
 memcpy( start+latest+2, (US[]){ link }, 2);
 memcpy( p, "Hello world!", 12 );
 nop_();
 US init = test + 2;
-{ UC x[] = { MOVBPI( 0x00,0x01 ), MOVSII(init%0x100,init/0x100), NEXT };
+{ UC x[] = { MOVBPI(0x0100), MOVSII(init), NEXT };
   memcpy( start, x, sizeof x ); }
 if(trace){P("\n");}
 trace=0;
