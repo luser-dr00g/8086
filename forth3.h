@@ -179,9 +179,10 @@ WORD(parse,   parse,     enter, //twodup, type, space,
                                 dup, zmore, zbranch, 2, 
                                   pspace, pnspace)//, twodup, type, space)
 CODE(bye,    bye,      HALT)
+CODE(errout,  errout,    JMPAX(bye+2)) //patched to (quit) later
 WORD(error,   error,     enter, lit, 'E', emit, lit, 'R', emit, lit, 'R', emit,
-                                dot, dot, dot,
-                                bye)
+                                dot, dot, dot, cr,
+                                errout)
 WORD(numdec,  numdec,    enter, dup, lit, 'A', less, zbranch, 5,  // a n a@
                                   lit, '0', sub, branch, 3, //(5)
                                   lit, 'A'-10, sub,  //(3)
@@ -261,8 +262,9 @@ CODE(accept,    accept,    MOVSII(interpret+2))
 HEADLESS(quit,  quit,      MOVBPI(0x0100), JMPAX(accept+2))
 HEADLESS(abort, abort,     MOVSPI(0xf000), JMPAX(quit))
 HEADLESS(cold,  cold,      JMPAX(abort))
-memcpy( start+here+2, (US[]){ p-start }, 2);
-memcpy( start+latest+2, (US[]){ link }, 2);
+memcpy( start+errout+3, (US[]){ quit }, 2 );
+memcpy( start+here+2, (US[]){ p-start }, 2 );
+memcpy( start+latest+2, (US[]){ link }, 2 );
 memcpy( p, "Hello world!", 12 );
 nop_();
 //{ UC x[] = { MOVBPI(0x0100), MOVSII(test+2), NEXT }; memcpy( start, x, sizeof x ); } 
