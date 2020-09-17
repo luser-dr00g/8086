@@ -18,7 +18,7 @@ static inline int
 forth(char *start){
 char *p = start;
 unsigned link = 0;
-trace=1;
+trace=0;
 { UC x[] = { HALT, 00, 00 };
   memcpy( p, x, sizeof x );
   p += 0x100; } //boot code and return stack area. stack pointer assumed well out of the way
@@ -66,8 +66,8 @@ CODE(/mod,   divmod,   POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(DX), PU
 CODE(u/mod,  udivmod,  POP(BX), XOR(,R,DX,DX), POP(AX), DIV(R,BX), PUSH(DX), PUSH(AX))
 CODE(*/mod,  muldivmod,POP(CX),POP(BX),POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(DX), PUSH(AX))
 CODE(*/,     muldiv,   POP(CX), POP(BX), POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(AX))
-CODE(max,    max,      POP(BX), POP(AX), CMP(,R,AX,BX), JL,2, MOV(,R,AX,BX), PUSH(AX))
-CODE(min,    min,      POP(BX), POP(AX), CMP(,R,AX,BX), JG,2, MOV(,R,AX,BX), PUSH(AX))
+CODE(min,    min,      POP(BX), POP(AX), CMP(,R,AX,BX), JL,2, MOV(,R,AX,BX), PUSH(AX))
+CODE(max,    max,      POP(BX), POP(AX), CMP(,R,AX,BX), JG,2, MOV(,R,AX,BX), PUSH(AX))
 CODE(abs,    abs,      POP(AX), OR(,R,AX,AX), JGE,2, NEG(R,AX), PUSH(AX))
 CODE(minus,  minus,    POP(AX), NEG(R,AX), PUSH(AX))
 CODE(and,    and,      POP(BX), POP(AX), AND(,R,AX,BX), PUSH(AX))
@@ -78,8 +78,10 @@ CODE(@,      at,       POP(BX), MOV(,Z,AX,BX_), PUSH(AX))
 CODE(+!,     plusbang, POP(BX), POP(AX), ADD(F,Z,AX,BX_))
 CODE(-!,     minusbang,POP(BX), POP(AX), SUB(F,Z,AX,BX_))
 CODE(type,   type,     POP(CX), POP(BX), MOVAXI(00,02), 
-                       MOV(BYTE,Z,DL,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ,-10)
+                       OR(,R,CX,CX), JLE, 10,
+                       MOV(BYTE,Z,DL,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ, -10)
 CODE(bye,    bye,      HALT)
+WORD(!=,     ne,   enter, eq, not)
 WORD(0,       zero,      docon, 0)
 WORD(1,       one,       docon, 1)
 WORD(2,       two,       docon, 2)
@@ -142,7 +144,9 @@ WORD(readline,readline,  enter, here, dup,
                                   swap, twodup, bang,
                                   oneplus, swap,
                                   ten, eq, zbranch, -10,//-12,
-                                over, sub, oneminus, key, drop)
+                                lit, ' '|(' '<<8), over, oneminus, bang,
+                                over, sub, //oneminus,
+                                key, drop)
 WORD(test9,   test9,     enter, readline, //twodup, udot, udot,
                                 type, ok)
 CODE(s=,      seq,       POP(CX), POP(DX), POP(BX), POP(AX), PUSH(SI), STD,
@@ -178,11 +182,53 @@ WORD(test13,  test13,    enter, readline, find, dup, dot,
                                 dup, zeq, not, zbranch, 1,
                                   execute,
                                 dot, ok)
-WORD(test,    test,      enter, test0, cr, test1, cr, test2, cr, test2a, cr,
-                                test3, cr, test4, cr, test5, cr, test6, cr,
-                                test7, cr, //test8, cr, test9, cr, test10, cr,
-                                test11, cr, //test12, cr,
-                                test13, cr,
+WORD(pspace1, pspace1,   enter, //dup, dot,
+                                rot, twodup, swap, sub, swap, drop,  // ad sp n-sp
+                                nrot, add, swap)
+WORD(pspace,  pspace,    enter, swap, zero,            // n ad sp
+                                  twodup, add, at,     // n ad sp ad[sp]
+                                  lit, 0xff, and,
+                                  swap, oneplus, swap, // n ad sp++ ad[sp]
+                                  lit, ' ', ne, zbranch, -14,
+                                oneminus,                           // n ad sp
+                                pspace1)
+WORD(pnspace1,pnspace1,  enter, //dup, dot, 
+                                swap, to_r, // n sp
+                                twodup, sub, rot, drop, // sp n-sp
+                                over, r, add, swap, // sp ad+sp n-sp
+                                rot, from_r, swap,  // ad+sp n-sp ad sp
+                                dup, zmore, zbranch, 1, c_exit, drop, zero)
+WORD(pnspace, pnspace,   enter, swap, zero,
+                                  twodup, add, at, lit, 0xff, and,
+                                  swap, oneplus, swap,
+                                  lit, ' ', eq, zbranch, -14,
+                                oneminus,
+                                pnspace1)
+WORD(parse,   parse,     enter, pspace, pnspace)
+WORD(test14,  test14,    enter, lit, 16, base, bang,
+                                readline,
+                                  parse, twodup, type, space,
+                                  dup, zmore, zbranch, 4,
+                                  drop, drop, branch, -12,
+                                drop, drop,
+                                ok)
+WORD(error,   error,     enter, lit, 'E', emit, lit, 'R', emit, lit, 'R', emit, bye)
+WORD(intrp,   intrp,     enter, readline,
+                                  parse, //twodup, type, space,      //(1/4)
+                                  dup, zmore, zbranch, 14,         //(4)
+                                  find, dup, zeq, not, zbranch, 9, //(6)
+                                  nrot, to_r, to_r, execute, from_r, from_r, //(6)
+                                  branch, -19, //(2)
+                                c_exit,
+                                  error)
+WORD(test15,  test15,    enter, intrp, ok, branch, -4)
+WORD(test,    test,      enter,
+                                //test0, cr, test1, cr, test2, cr, test2a, cr,
+                                //test3, cr, test4, cr, test5, cr, test6, cr,
+                                //test7, cr, //test8, cr, test9, cr, test10, cr,
+                                //test11, cr, //test12, cr, test13, cr,
+                                //test14, cr,
+                                test15, cr,
                                 bye)
 int dummy = 0;
 CODE(interpret, interpret, JMPAX(dummy))
@@ -202,4 +248,3 @@ US init = test + 2;
 if(trace){P("\n");}
 trace=0;
 return  0;}
-
