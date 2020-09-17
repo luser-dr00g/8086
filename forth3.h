@@ -32,6 +32,7 @@ CODE(emit,   emit,     POP(DX), MOVAXI(00,02), INT(21))
 CODE(key,    key,      MOVAXI(00,01), INT(21), XOR(,R,BX,BX), MOV(BYTE,R,BL,AL), PUSH(BX))
 CODE(0branch,zbranch,  POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JNZ,2, ADD(,R,SI,AX))
 CODE(branch, branch,   LODS, SHL(R,AX), ADD(,R,SI,AX))
+CODE(1branch,onebranch,POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JZ, 2, ADD(,R,SI,AX))
 CODE(lit,    lit,      LODS, PUSH(AX))
 CODE(depth,  depth,    MOVAXI(0x00,0xf0), MOV(,R,BX,SP), SUB(,R,AX,BX),SHR(R,AX), PUSH(AX))
 CODE(dup,    dup,      POP(AX), PUSH(AX), PUSH(AX))
@@ -82,6 +83,13 @@ CODE(-!,     minusbang,POP(BX), POP(AX), SUB(F,Z,AX,BX_))
 CODE(type,   type,     POP(CX), POP(BX), MOVAXI(00,02), 
                        OR(,R,CX,CX), JLE, 10,
                        MOV(BYTE,Z,DL,BX_), INT(21), INC_(R,BX), DEC_(R,CX), JNZ, -10)
+CODE(s=,     seq,      POP(CX), POP(DX), POP(BX), POP(AX), PUSH(SI), STD,
+                       CMP(,R,CX,BX), MOVBXI(0xff,0xff), JZ, 4, 
+                         INC_(R,BX), sJMP, 11,        //(4)
+                       MOV(,R,SI,AX), MOV(,R,DI,DX),  //(4)
+                         BYTE+CMPS, JNZ, -11,         //(3)
+                         DEC_(R,CX), JNZ, -7,         //(4)
+                       POP(SI), PUSH(BX))
 CODE(bye,    bye,      HALT)
 WORD(!=,     ne,   enter, eq, not)
 WORD(0,       zero,      docon, 0)
@@ -113,22 +121,6 @@ WORD(ok,      ok,        enter, lit,'O',emit, lit,'K',emit, cr)
 WORD(latest,  latest,    enter, lit, 0)
 WORD(here,    here,      enter, lit, 0)
 WORD(allot,   allot,     enter, lit, here+4, plusbang)
-WORD(test0,   test0,     enter, zero, dot,
-                                one, dot, ten, dot, ok)
-WORD(test1,   test1,     enter, zero, zeq, dot,
-                                one, zeq, dot, ok)
-WORD(test2,   test2,     enter, lit,12,            zless, dot,
-                                lit,1+(0xffff^50), zless, dot,
-                                lit,12,            zmore, dot,
-                                lit,1+(0xffff^50), zmore, dot, ok)
-WORD(test2a,  test2a,    enter, one, ten, less, dot,
-                                one, ten, more, dot, ok)
-WORD(test3,   test3,     enter, here, lit, 12, allot, 
-                                lit, 12, type, ok)
-WORD(test4,   test4,     enter, var, dot, var, at, dot, ok)
-WORD(test5,   test5,     enter, ten, var, bang, var, at, dot, ok)
-WORD(test6,   test6,     enter, lit, 16, base, bang, var, dot, var, at, dot, ok)
-WORD(test7,   test7,     enter, lit, -10, udot, ok)
 WORD(ename,   ename,     enter,   //dup, udot,
                                 dup, lit, 2, add, at, lit, 0xff, and,
                                   //dup, udot,
@@ -140,7 +132,6 @@ WORD(words,   words,     enter, zero, latest,
                                   at,
                                   dup, zeq, zbranch, -12,
                                 drop, drop)
-WORD(test8,   test8,     enter, words, ok)
 WORD(readline,readline,  enter, here, dup,
                                   key, //dup, udot,
                                   swap, twodup, bang,
@@ -149,22 +140,6 @@ WORD(readline,readline,  enter, here, dup,
                                 lit, ' '|(' '<<8), over, oneminus, bang,
                                 over, sub, //oneminus,
                                 key, drop)
-WORD(test9,   test9,     enter, readline, //twodup, udot, udot,
-                                type, ok)
-CODE(s=,      seq,       POP(CX), POP(DX), POP(BX), POP(AX), PUSH(SI), STD,
-                         CMP(,R,CX,BX), MOVBXI(0xff,0xff), JZ, 4, 
-                           INC_(R,BX), sJMP, 11,        //(4)
-                         MOV(,R,SI,AX), MOV(,R,DI,DX),  //(4)
-                           BYTE+CMPS, JNZ, -11,         //(3)
-                           DEC_(R,CX), JNZ, -7,         //(4)
-                         POP(SI), PUSH(BX))
-WORD(test10,  test10,    enter, readline, twodup, dup, dot, type, space,
-                                latest, ename, twodup, dup, dot, type, space, 
-                                seq, dot, cr)
-WORD(test11,  test11,    enter, five, four, three, two, one,
-                                zero, pick, dot,
-                                one, pick, dot,
-                                two, pick, dot, ok)
 WORD(findloop,findloop,  enter, nrot, 
                                   threedup, rot, ename, //(3)
                                   //twodup, type, space,  //(3)
@@ -179,11 +154,6 @@ WORD(findloop,findloop,  enter, nrot,
 WORD(find,    find,      enter, latest, findloop,
                                 dup, zeq, not, zbranch, 1,
                                   ecode)
-WORD(test12,  test12,    enter, readline, find, dot, ok)
-WORD(test13,  test13,    enter, readline, find, dup, dot,
-                                dup, zeq, not, zbranch, 1,
-                                  execute,
-                                dot, ok)
 WORD(pspace1, pspace1,   enter, //dup, dot,
                                 rot, twodup, swap, sub, swap, drop,  // ad sp n-sp
                                 nrot, add, swap)
@@ -207,13 +177,6 @@ WORD(pnspace, pnspace,   enter, swap, zero,
                                 oneminus,
                                 pnspace1)
 WORD(parse,   parse,     enter, pspace, pnspace)
-WORD(test14,  test14,    enter, lit, 16, base, bang,
-                                readline,
-                                  parse, twodup, type, space,
-                                  dup, zmore, zbranch, 4,
-                                  drop, drop, branch, -12,
-                                drop, drop,
-                                ok)
 WORD(error,   error,     enter, lit, 'E', emit, lit, 'R', emit, lit, 'R', emit, bye)
 WORD(intrp,   intrp,     enter, readline,
                                   parse, //twodup, type, space,      //(1/4)
@@ -222,7 +185,45 @@ WORD(intrp,   intrp,     enter, readline,
                                   nrot, to_r, to_r, execute, from_r, from_r, //(6)
                                   branch, -19, //(2)
                                 twodrop, twodrop, c_exit, //(3)
-                                  error)
+                                error)
+WORD(test0,   test0,     enter, zero, dot,
+                                one, dot, ten, dot, ok)
+WORD(test1,   test1,     enter, zero, zeq, dot,
+                                one, zeq, dot, ok)
+WORD(test2,   test2,     enter, lit,12,            zless, dot,
+                                lit,1+(0xffff^50), zless, dot,
+                                lit,12,            zmore, dot,
+                                lit,1+(0xffff^50), zmore, dot, ok)
+WORD(test2a,  test2a,    enter, one, ten, less, dot,
+                                one, ten, more, dot, ok)
+WORD(test3,   test3,     enter, here, lit, 12, allot, 
+                                lit, 12, type, ok)
+WORD(test4,   test4,     enter, var, dot, var, at, dot, ok)
+WORD(test5,   test5,     enter, ten, var, bang, var, at, dot, ok)
+WORD(test6,   test6,     enter, lit, 16, base, bang, var, dot, var, at, dot, ok)
+WORD(test7,   test7,     enter, lit, -10, udot, ok)
+WORD(test8,   test8,     enter, words, ok)
+WORD(test9,   test9,     enter, readline, //twodup, udot, udot,
+                                type, ok)
+WORD(test10,  test10,    enter, readline, twodup, dup, dot, type, space,
+                                latest, ename, twodup, dup, dot, type, space, 
+                                seq, dot, cr)
+WORD(test11,  test11,    enter, five, four, three, two, one,
+                                zero, pick, dot,
+                                one, pick, dot,
+                                two, pick, dot, ok)
+WORD(test12,  test12,    enter, readline, find, dot, ok)
+WORD(test13,  test13,    enter, readline, find, dup, dot,
+                                dup, zeq, not, zbranch, 1,
+                                  execute,
+                                dot, ok)
+WORD(test14,  test14,    enter, lit, 16, base, bang,
+                                readline,
+                                  parse, twodup, type, space,
+                                  dup, zmore, zbranch, 4,
+                                  drop, drop, branch, -12,
+                                drop, drop,
+                                ok)
 WORD(test15,  test15,    enter, intrp, ok, branch, -4)
 WORD(test,    test,      enter,
                                 //test0, cr, test1, cr, test2, cr, test2a, cr,

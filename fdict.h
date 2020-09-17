@@ -15,7 +15,6 @@ struct headless_entry {
   UC name_len;
   UC name[ MAX_NAME ];
   UC param[ MAX_CODE_PARAM ];
-  US dummy;
 };
 
 struct word_entry {
