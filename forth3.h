@@ -88,7 +88,6 @@ CODE(s=,     seq,      POP(CX), POP(DX), POP(BX), POP(AX), PUSH(SI), STD,
                          BYTE+CMPS, JNZ, -11,         //(3)
                          DEC_(R,CX), JNZ, -7,         //(4)
                        POP(SI), PUSH(BX))
-CODE(bye,    bye,      HALT)
 WORD(<>,      ne,        enter, eq, not)
 WORD(0,       zero,      docon, 0)
 WORD(1,       one,       docon, 1)
@@ -179,6 +178,7 @@ WORD(pnspace, pnspace,   enter, dup, zmore, zbranch, 2,
 WORD(parse,   parse,     enter, //twodup, type, space, 
                                 dup, zmore, zbranch, 2, 
                                   pspace, pnspace)//, twodup, type, space)
+CODE(bye,    bye,      HALT)
 WORD(error,   error,     enter, lit, 'E', emit, lit, 'R', emit, lit, 'R', emit,
                                 dot, dot, dot,
                                 bye)
@@ -247,22 +247,17 @@ WORD(test14,  test14,    enter, lit, 16, base, bang,
                                   drop, drop, branch, -12,
                                 drop, drop,
                                 ok)
-WORD(test15,  test15,    enter, ten, base, bang,
+WORD(interpret,interpret,enter, ten, base, bang,
                                 intrp, ok, branch, -4)
 WORD(test,    test,      enter,
-                                //test0, test1, test2, test2a,
-                                //test3, test4, test5, test6,
-                                //test7, test8, //test9, cr, test10, cr,
-                                //test11, //test12, cr, test13, cr,
+                                test0, test1, test2, test2a,
+                                test3, test4, test5, test6,
+                                test7, test8, //test9, cr, test10, cr,
+                                test11) //test12, cr, test13, cr,
                                 //test14, cr,
-                                test15,
-                                bye)
-int dummy = 0;
-//CODE(interpret, interpret, JMPAX(dummy))
-//CODE(accept,    accept,    JMPAX(interpret+2))
-  //UC patch[] = { JMPAX(accept) }; memcpy(start+interpret, patch, sizeof patch );
-  //memcpy(start+interpret+1, (US[]){ accept+2 }, sizeof(US));
-CODE(accept,    accept,    MOVSII(test15))
+                                //interpret,
+                                //bye)
+CODE(accept,    accept,    MOVSII(interpret+2))
 HEADLESS(quit,  quit,      MOVBPI(0x0100), JMPAX(accept+2))
 HEADLESS(abort, abort,     MOVSPI(0xf000), JMPAX(quit))
 HEADLESS(cold,  cold,      JMPAX(abort))
@@ -270,9 +265,8 @@ memcpy( start+here+2, (US[]){ p-start }, 2);
 memcpy( start+latest+2, (US[]){ link }, 2);
 memcpy( p, "Hello world!", 12 );
 nop_();
-US init = test + 2;
-{ UC x[] = { MOVBPI(0x0100), MOVSII(init), NEXT };
-  memcpy( start, x, sizeof x ); }
+//{ UC x[] = { MOVBPI(0x0100), MOVSII(test+2), NEXT }; memcpy( start, x, sizeof x ); } 
+{ UC x[] = { JMPAX(cold) }; memcpy( start, x, sizeof x ); }
 if(trace){P("\n");}
 trace=0;
 return  0;}
