@@ -24,6 +24,7 @@ trace=0;
 HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
 HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dovar, dovar, MOV(,R,BX,AX), LEA(,B,AX,BX_),2, PUSH(AX))
+HEADLESS(dostr, dostr, MOV(,R,BX,AX), LEA(,B,AX,BX_),4, MOV(,B,CX,BX_),2, PUSH(AX),PUSH(CX))
 CODE(execute,execute,  POP(BX), MOV(,R,AX,BX), MOV(,B,BX,BX_),0, JMP_(R,BX))
 CODE(exit,   c_exit,   POPRSP(SI))
 CODE(emit,   emit,     POP(DX), MOVAXI(0x0200), INT(21))
@@ -131,7 +132,9 @@ WORD(words,   words,     enter, zero, latest,
                                   at,                      //(1)
                                   dup, zeq, zbranch, -12,  //(4)
                                 drop, drop)
-WORD(readline,readline,  enter, here, dup,
+WORD(buffer,  buffer,    dostr, 0, 0)
+p+=20;
+WORD(readline,readline,  enter, buffer, drop, dup,
                                   key, //dup, udot,
                                   swap, twodup, bang,
                                   oneplus, swap,
@@ -178,7 +181,7 @@ WORD(pnspace, pnspace,   enter, dup, zmore, zbranch, 2,
 WORD(parse,   parse,     enter, //twodup, type, space, 
                                 dup, zmore, zbranch, 2, 
                                   pspace, pnspace)//, twodup, type, space)
-CODE(bye,    bye,      HALT)
+CODE(bye,     bye,       HALT)
 CODE(errout,  errout,    JMPAX(bye+2)) //patched to (quit) later
 WORD(error,   error,     enter, lit, 'E', emit, lit, 'R', emit, lit, 'R', emit,
                                 dot, dot, dot, cr,
