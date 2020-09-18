@@ -4,6 +4,7 @@ enum { MAX_NAME = 9, MAX_CODE_PARAM = 40, MAX_WORD_PARAM = 30 };
 
 struct code_entry {
   US link;
+  US flags;
   UC name_len;
   UC name[ MAX_NAME ];
   US code;
@@ -12,6 +13,7 @@ struct code_entry {
 
 struct headless_entry {
   US link;
+  US flags;
   UC name_len;
   UC name[ MAX_NAME ];
   UC param[ MAX_CODE_PARAM ];
@@ -19,6 +21,7 @@ struct headless_entry {
 
 struct word_entry {
   US link;
+  US flags;
   UC name_len;
   UC name[ MAX_NAME ];
   US code;
@@ -30,6 +33,7 @@ struct word_entry {
   {							\
     struct code_entry x = { 				\
       .link     = link, 				\
+      .flags    = flags,				\
       .name_len = sizeof(  # n  ) - 1, 			\
       .name     = # n , 				\
       .code     = P_PARAM_PTR, 				\
@@ -50,6 +54,7 @@ struct word_entry {
   {							\
     struct headless_entry x = {				\
       .link     = link,					\
+      .flags    = flags,				\
       .name_len = sizeof(  # n  ) - 1,			\
       .name     = # n ,					\
       .param    = { __VA_ARGS__ , NEXT }		\
@@ -68,6 +73,7 @@ struct word_entry {
   {							\
     struct word_entry x = { 				\
       .link     = link,		 			\
+      .flags    = flags,				\
       .name_len = sizeof(  # namestring  ) - 1, 	\
       .name     = # namestring ,			\
       .code     = codeword ,	 			\
