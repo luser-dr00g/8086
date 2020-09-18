@@ -202,7 +202,7 @@ WORD(number,  number,    enter, drop, zero,                               // a n
                                 drop, swap, drop)                         // n
 WORD(iexec,   iexec,     enter, nrot, drop, drop, nrot, // c a n
                                 to_r, to_r, execute, from_r, from_r) // ...c? a n
-WORD(intrp,   intrp,     enter, readline, // a n
+WORD(interpret,interpret,enter, //readline, // a n
                                   parse, //twodup, type, space,      //(1/4) // a n a' n'
                                   dup, zmore, zbranch, 8,         //(4)
                                   find, dup, zeq, onbranch, 6, //(5) // a n a' n' c (b:0=c)
@@ -251,20 +251,22 @@ WORD(test14,  test14,    enter, lit, 16, base, bang,
                                   drop, drop, branch, -12,
                                 drop, drop,
                                 ok)
-WORD(interpret,interpret,enter, ten, base, bang,
-                                intrp, ok, branch, -4)
+WORD(test15,  test15,    enter, ten, base, bang,
+                                readline, interpret, ok, branch, -4)
 WORD(test,    test,      enter,
                                 test0, test1, test2, test2a,
                                 test3, test4, test5, test6,
                                 test7, test8, //test9, cr, test10, cr,
                                 test11) //test12, cr, test13, cr,
                                 //test14, cr,
-                                //interpret,
+                                //test15,
                                 //bye)
-CODE(accept,    accept,    MOVSII(interpret+2))
-HEADLESS(quit,  quit,      MOVBPI(0x0100), JMPAX(accept+2))
-HEADLESS(abort, abort,     MOVSPI(0xf000), JMPAX(quit))
-HEADLESS(cold,  cold,      JMPAX(abort))
+WORD(accept,    accept,    enter, readline, interpret)
+CODE(resetsp,   resetsp,   MOVSPI(0xf000))
+CODE(resetrsp,  resetrsp,  MOVBPI(0x0100))
+WORD(quit,      quit,      enter, resetsp, accept, ok, branch, -4)
+WORD(abort,     abort,     enter, resetrsp, quit)
+HEADLESS(cold,  cold,      MOVSII(abort+2))
 memcpy( start+errout+3, (US[]){ quit }, 2 );
 memcpy( start+here+2, (US[]){ p-start }, 2 );
 memcpy( start+latest+2, (US[]){ link }, 2 );
