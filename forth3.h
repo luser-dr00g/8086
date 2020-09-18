@@ -1,4 +1,3 @@
-
 #include "asm8086.h"
 #include "fdict.h"
 /*	 W   = AX     PSP = SP
@@ -27,6 +26,15 @@ HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dovar, dovar, MOV(,R,BX,AX), LEA(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dostr, dostr, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, MOV(,B,CX,BX_),4,
                        PUSH(AX),PUSH(CX))
+CODE(push,   push,     POP(BX), POP(AX), INC_(Z,BX_), 
+                       MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX), 
+                       MOV(F,Z,AX,DI_))
+CODE(peek,   peek,     POP(BX),
+                       MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX),
+                       MOV(,Z,AX,DI_), PUSH(AX))
+CODE(pop,    pop,      POP(BX), 
+                       MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX), 
+                       MOV(,Z,AX,DI_), DEC_(Z,BX_), PUSH(AX))
 CODE(execute,execute,  POP(BX), MOV(,R,AX,BX), MOV(,B,BX,BX_),0, JMP_(R,BX))
 CODE(exit,   c_exit,   POPRSP(SI))
 CODE(emit,   emit,     POP(DX), MOVAXI(0x0200), INT(21))
@@ -221,29 +229,42 @@ WORD(!name,   bangname,  enter, parse, dup,
 WORD(!colon,  bangcolon, enter, lit, enter, 
                                 over, lit, offsetof(struct word_entry,code), add, bang)
 WORD(param,   param,     enter, lit, offsetof(struct word_entry,param), add)
-WORD(],       rbracket,  enter, one, state, bang)
-WORD([,       lbracket,  enter, zero, state, bang)
+WORD(link!,   linkbang,  enter, drop, lit, latest+2, bang) 
 WORD(create,  create,    enter, here, lit, sizeof(struct word_entry), allot, 
                                 banglink)
-WORD(:,       colon,     enter, //lit, ':', emit,
+WORD(bradr,   bradr,     dovar, 0)
+WORD(],       rbracket,  enter, zero, not, state, bang)
+flags=1;
+WORD([,       lbracket,  enter, zero, state, bang)
+WORD(if,      if_,       enter, lit, 'I', emit, //dup, dot,
+                                lit, zbranch, over, bang, twoplus, //dup, dot,
+                                dup, bradr, push, twoplus)
+WORD(else,    else_,     enter, lit, 'E', emit, //dup, dot,
+                                lit, branch, over, bang, twoplus, //dup, dot, cr,
+                                dup, bradr, peek, sub, two, div, dup, dot, cr,
+                                bradr, pop, bang,
+                                dup, bradr, push, twoplus)
+WORD(then,    then_,     enter, lit, 'T', emit,
+                                dup, bradr, peek, twoplus, sub, two, div, dup, dot, cr,
+                                bradr, pop, bang,
+                                dup, bradr, bang)
+WORD(;,       semi,      enter, lit, ';', emit,
+                                lit, c_exit, over, bang, latest, dot, twodup, dot, dot,
+                                linkbang, lbracket)
+flags=0;
+WORD(:,       colon,     enter, lit, ':', emit,
                                 create, 
                                 zero, bangflags, bangname, bangcolon, dup, param,
                                 rbracket)//, twodup, udot, udot)
-flags=1;
-WORD(;,       semi,      enter, //lit, ';', emit,
-                                lit, c_exit, over, bang,
-                                //latest, dot, twodup, dot, dot,
-                                drop, lit, latest+2, bang, lbracket)
-flags=0;
 WORD(isimmed, isimmed,   enter, lit, (S)((I)offsetof(struct word_entry,flags) -
                                      offsetof(struct word_entry,code)), add, at)
-WORD(compile, compile,   enter, //lit, 'C', emit, space,
-                                //threedup, dot, dot, dot,
+WORD(compile, compile,   enter, lit, 'C', emit, space,
+                                threedup, dot, dot, dot,
                                 dup, isimmed, onbranch, 5, 
                                   over, bang, twoplus, branch, 1,
                                   execute)
-WORD(complit, complit,   enter, //lit, 'L', emit, space,
-                                //threedup, dot, dot, dot,
+WORD(complit, complit,   enter, lit, 'L', emit, space,
+                                threedup, dot, dot, dot,
                                 swap, dup, lit, lit, swap, bang,
                                 twoplus, swap, over, bang,
                                 twoplus)
