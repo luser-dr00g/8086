@@ -24,7 +24,8 @@ trace=0;
 HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
 HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dovar, dovar, MOV(,R,BX,AX), LEA(,B,AX,BX_),2, PUSH(AX))
-HEADLESS(dostr, dostr, MOV(,R,BX,AX), LEA(,B,AX,BX_),4, MOV(,B,CX,BX_),2, PUSH(AX),PUSH(CX))
+HEADLESS(dostr, dostr, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, MOV(,B,CX,BX_),4,
+                       PUSH(AX),PUSH(CX))
 CODE(execute,execute,  POP(BX), MOV(,R,AX,BX), MOV(,B,BX,BX_),0, JMP_(R,BX))
 CODE(exit,   c_exit,   POPRSP(SI))
 CODE(emit,   emit,     POP(DX), MOVAXI(0x0200), INT(21))
@@ -133,16 +134,17 @@ WORD(words,   words,     enter, zero, latest,
                                   at,                      //(1)
                                   dup, zeq, zbranch, -12,  //(4)
                                 drop, drop)
-WORD(buffer,  buffer,    dostr, 0, 0)
+WORD(buffer,  buffer,    dostr, buffer+6, MAX_WORD_PARAM*2 - 4 + 20)
+WORD(setbuf,  setbuf,    enter, lit, buffer+4, bang, lit, buffer+2, bang)
+WORD(resetbuf,resetbuf,  enter, lit, buffer+6, lit, MAX_WORD_PARAM*2 - 4 + 20, setbuf)
 p+=20;
-WORD(readline,readline,  enter, buffer, drop, dup,
+WORD(readline,readline,  enter, resetbuf, buffer, drop, dup,
                                   key, //dup, udot,
                                   swap, twodup, bang,
                                   oneplus, swap,
                                   ten, eq, zbranch, -10,//-12,
                                 lit, ' '|(' '<<8), over, oneminus, bang,
-                                over, sub)//, oneminus)
-                                //key, drop)
+                                over, sub, setbuf)
 WORD(findloop,findloop,  enter, nrot,  // latest adr n
                                   threedup, rot, ename, //(3) // l a n a n a' n'
                                   //twodup, type, space,  //(3)
@@ -250,9 +252,9 @@ WORD(test6,   test6,     enter, lit, 16, base, bang, var, dot, var, at, dot, ok)
 WORD(test7,   test7,     enter, lit, -10, udot, ok)
 WORD(test8,   test8,     enter, lit, 'w', emit, lit, 'o', emit, lit, 'r', emit,
                                 lit, 'd', emit, lit, 's', emit, cr,  words, ok)
-WORD(test9,   test9,     enter, readline, //twodup, udot, udot,
+WORD(test9,   test9,     enter, readline, buffer, //twodup, udot, udot,
                                 type, ok)
-WORD(test10,  test10,    enter, readline, twodup, dup, dot, type, space,
+WORD(test10,  test10,    enter, readline, buffer, twodup, dup, dot, type, space,
                                 latest, ename, twodup, dup, dot, type, space, 
                                 seq, dot, cr)
 WORD(test11,  test11,    enter, five, four, three, two, one,
@@ -260,27 +262,27 @@ WORD(test11,  test11,    enter, five, four, three, two, one,
                                 one, pick, dot,
                                 two, pick, dot, 
                                 drop, drop, drop, drop, drop, ok)
-WORD(test12,  test12,    enter, readline, find, dot, dot, dot, ok)
-WORD(test13,  test13,    enter, readline, find, dup, dot,
+WORD(test12,  test12,    enter, readline, buffer, find, dot, dot, dot, ok)
+WORD(test13,  test13,    enter, readline, buffer, find, dup, dot,
                                 dup, zeq, onbranch, 1,
                                   execute,
                                 dot, ok)
 WORD(test14,  test14,    enter, lit, 16, base, bang,
-                                readline,
+                                readline, buffer,
                                   parse, twodup, type, space,
                                   dup, zmore, zbranch, 4,
                                   drop, drop, branch, -12,
                                 drop, drop,
                                 ok)
 WORD(test15,  test15,    enter, ten, base, bang,
-                                readline, interpret, ok, branch, -4)
+                                readline, buffer, interpret, ok, branch, -4)
 WORD(test,    test,      enter,
                                 test0, test1, test2, test2a,
                                 test3, test4, test5, test6,
                                 test7, test8, //test9, cr, test10, cr,
                                 test11) //test12, cr, test13, cr,
                                 //test14, cr, //test15, //bye)
-WORD(accept,    accept,    enter, readline, interpret)
+WORD(accept,    accept,    enter, readline, buffer, interpret)
 CODE(resetsp,   resetsp,   MOVSPI(0xf000))
 CODE(resetrsp,  resetrsp,  MOVBPI(0x0100))
 WORD(quit,      quit,      enter, resetsp, accept, ok, branch, -4)
