@@ -123,9 +123,9 @@ WORD(latest,  latest,    docon, 0)
 WORD(here,    here,      docon, 0)
 WORD(allot,   allot,     enter, lit, here+2, plusbang)
 WORD(ename,   ename,     enter,   //dup, udot,
-                                dup, lit, 2, add, at, lit, 0xff, and,
+                                dup, lit, offsetof( struct code_entry, name_len ), add, cat,
                                   //dup, udot,
-                                swap, lit, 3, add, swap)
+                                swap, lit, offsetof( struct code_entry, name ), add, swap)
 WORD(ecode,   ecode,     enter, lit, offsetof( struct code_entry, code ), add)
 WORD(words,   words,     enter, zero, latest,
                                   swap, //dup, udot,       //(1/3)
@@ -225,7 +225,7 @@ WORD(literal, literal,   enter, state, at, zbranch, 3,
                                 nrot)
 WORD(iexec,   iexec,     enter, nrot, drop, drop, nrot, // c a n
                                 to_r, to_r, execomp, from_r, from_r) // ...c? a n
-WORD(interpret,interpret,enter, //readline, // a n
+WORD(interpret,interpret,enter, buffer, //readline, // a n
                                   parse, //twodup, type, space,      //(1/4) // a n a' n'
                                   dup, zmore, zbranch, 8,         //(4)
                                   find, dup, zeq, onbranch, 6, //(5) // a n a' n' c (b:0=c)
@@ -275,14 +275,14 @@ WORD(test14,  test14,    enter, lit, 16, base, bang,
                                 drop, drop,
                                 ok)
 WORD(test15,  test15,    enter, ten, base, bang,
-                                readline, buffer, interpret, ok, branch, -4)
+                                readline, interpret, ok, branch, -4)
 WORD(test,    test,      enter,
                                 test0, test1, test2, test2a,
                                 test3, test4, test5, test6,
                                 test7, test8, //test9, cr, test10, cr,
                                 test11) //test12, cr, test13, cr,
                                 //test14, cr, //test15, //bye)
-WORD(accept,    accept,    enter, readline, buffer, interpret)
+WORD(accept,    accept,    enter, readline, interpret)
 CODE(resetsp,   resetsp,   MOVSPI(0xf000))
 CODE(resetrsp,  resetrsp,  MOVBPI(0x0100))
 WORD(quit,      quit,      enter, resetsp, accept, ok, branch, -4)
