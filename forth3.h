@@ -233,6 +233,7 @@ WORD(link!,   linkbang,  enter, lit, latest+2, bang)
 WORD(create,  create,    enter, here, lit, sizeof(struct word_entry), allot, 
                                 banglink)
 WORD(bradr,   bradr,     dovar, 0)
+WORD(doadr,   doadr,     dovar, 0)
 WORD(comma,   comma,     enter, over, bang, twoplus)
 WORD(],       rbracket,  enter, true, state, bang)
 flags=1;
@@ -254,6 +255,8 @@ WORD(begin,   begin,     enter, //lit, 'B', emit, dup, dot, cr,
                                 dup, bradr, push)
 WORD(bckbrch, bckbrch,   enter, dup, twoplus, bradr, pop, sub, two, div, minus,//dup,dot,cr,
                                 over, bang, twoplus)
+WORD(dobrch,  dobrch,    enter, dup, twoplus, doadr, pop, sub, two, div, minus,//dup,dot,cr,
+                                over, bang, twoplus)
 WORD(repeat,  repeat,    enter, //lit, 'R', emit, dup, dot, cr,
                                 lit, branch, comma,  bckbrch)
 WORD(until,   until,     enter, //lit, 'U', emit, dup, dot, cr,
@@ -262,19 +265,32 @@ WORD(while,   while_,    enter, //lit, 'W', emit, dup, dot, cr,
                                 lit, onbranch, comma,  bckbrch)
 WORD(2trcom,  twotrcom,  enter, lit, to_r, comma, lit, to_r, comma)
 WORD(2frcom,  twofrcom,  enter, lit, from_r, comma, lit, from_r, comma)
-WORD(do,      do_,       enter, //lit, 'D', emit,
+WORD(2drcom,  twodrcom,  enter, twofrcom, lit, twodrop, comma)
+WORD(do,      do_,       enter, lit, 'D', emit,
                                 twotrcom,
-                                dup, bradr, push)
-WORD(loop,    loop,      enter, //lit, 'O', emit,
+                                dup, doadr, push)
+WORD(loop,    loop,      enter, lit, 'O', emit,
                                 twofrcom,
-                                lit, twodup, comma, lit, eq, comma,
-                                lit, onbranch, comma, lit, 5, comma,
                                 lit, oneplus, comma, 
+                                lit, twodup, comma, lit, eq, comma,
+                                lit, onbranch, comma, lit, 4, comma,
                                 twotrcom,
-                                lit, branch, comma, bckbrch)
-WORD(+loop,   plusloop,  enter, error)
-WORD(leave,   leave,     enter, error)
-WORD(i,       i_,        enter, error)
+                                lit, branch, comma, dobrch, twodrcom)
+WORD(+loop,   plusloop,  enter, lit, '+', emit,
+                                twofrcom,
+                                lit, rot, comma, lit, add, comma,
+                                lit, twodup, comma, lit, more, comma,
+                                lit, zbranch, comma, lit, 4, comma,
+                                twotrcom,
+                                lit, branch, comma, dobrch, twodrcom)
+WORD(leave,   leave,     enter, lit, 'X', emit,
+                                twofrcom,
+                                lit, drop, comma, lit, dup, comma, lit, oneminus, comma,
+                                twotrcom)
+WORD(i,       i_,        enter, lit, 'i', emit,
+                                twofrcom,
+                                lit, dup, comma, lit, nrot, comma,
+                                twotrcom)
 WORD(;,       semi,      enter, //lit, ';', emit,
                                 lit, c_exit, over, bang, //latest, dot, twodup, dot, dot,
                                 drop, drop, lbracket)
