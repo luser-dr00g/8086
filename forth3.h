@@ -200,8 +200,16 @@ WORD(number,  number,    enter, drop, zero,                               // a n
                                   swap, oneplus, swap,              //(3) // a' n'
                                   branch, -19,                      //(2)
                                 drop, swap, drop)                         // n
+WORD(compile, compile,   enter, error)
+WORD(state,   state,     dovar, 0)
+WORD(execomp, execomp,   enter, state, at, zbranch, 3, 
+                                compile, branch, 1,
+                                execute)
+WORD(literal, literal,   enter, state, at, zbranch, 3,
+                                error, branch, 1,
+                                nrot)
 WORD(iexec,   iexec,     enter, nrot, drop, drop, nrot, // c a n
-                                to_r, to_r, execute, from_r, from_r) // ...c? a n
+                                to_r, to_r, execomp, from_r, from_r) // ...c? a n
 WORD(interpret,interpret,enter, //readline, // a n
                                   parse, //twodup, type, space,      //(1/4) // a n a' n'
                                   dup, zmore, zbranch, 8,         //(4)
@@ -209,7 +217,7 @@ WORD(interpret,interpret,enter, //readline, // a n
                                   iexec, //(1)
                                   branch, -13, //(2)
                                 twodrop, twodrop, c_exit, //(3) // ...c?
-                                drop, number, nrot, //(3) // ...num a n
+                                drop, number, literal, //(3) // ...num a n
                                 branch, -21) //(2)
 WORD(test0,   test0,     enter, zero, dot,
                                 one, dot, ten, dot, ok)
