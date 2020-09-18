@@ -92,7 +92,6 @@ CODE(!,      bang,     POP(BX), POP(AX), MOV(F,Z,AX,BX_))
 CODE(c!,     cbang,    POP(BX), POP(AX), MOV(BYTE+F,Z,AL,BX_))
 CODE(@,      at,       POP(BX), MOV(,Z,AX,BX_), PUSH(AX))
 CODE(c@,     cat,      POP(BX), MOVAXI(0), MOV(BYTE,Z,AL,BX_), PUSH(AX))
-//WORD(c@,      cat,       enter, at, lit, 0xff, and)
 CODE(+!,     plusbang, POP(BX), POP(AX), ADD(F,Z,AX,BX_))
 CODE(-!,     minusbang,POP(BX), POP(AX), SUB(F,Z,AX,BX_))
 CODE(type,   type,     POP(CX), POP(BX), MOVAXI(0x0200), 
@@ -226,10 +225,10 @@ WORD(!flags,  bangflags, enter, over, lit, offsetof(struct word_entry,flags), ad
 WORD(!name,   bangname,  enter, parse, dup,
                                 threepick,lit,offsetof(struct word_entry,name_len),add,cbang,
                                 twopick, lit, offsetof(struct word_entry,name), add, sbang)
-WORD(!colon,  bangcolon, enter, lit, enter, 
-                                over, lit, offsetof(struct word_entry,code), add, bang)
+WORD(!code,   bangcode,  enter, over, lit, offsetof(struct word_entry,code), add, bang)
+WORD(!colon,  bangcolon, enter, lit, enter, bangcode)
 WORD(param,   param,     enter, lit, offsetof(struct word_entry,param), add)
-WORD(link!,   linkbang,  enter, drop, lit, latest+2, bang) 
+WORD(link!,   linkbang,  enter, lit, latest+2, bang) 
 WORD(create,  create,    enter, here, lit, sizeof(struct word_entry), allot, 
                                 banglink)
 WORD(bradr,   bradr,     dovar, 0)
@@ -250,12 +249,23 @@ WORD(then,    then_,     enter, lit, 'T', emit,
                                 dup, bradr, bang)
 WORD(;,       semi,      enter, lit, ';', emit,
                                 lit, c_exit, over, bang, latest, dot, twodup, dot, dot,
-                                linkbang, lbracket)
+                                drop, drop, lbracket)
 flags=0;
 WORD(:,       colon,     enter, lit, ':', emit,
                                 create, 
-                                zero, bangflags, bangname, bangcolon, dup, param,
+                                zero, bangflags, bangname, bangcolon, dup, linkbang, 
+                                dup, param,
                                 rbracket)//, twodup, udot, udot)
+WORD(!con,    bangcon,   enter, lit, docon, bangcode)
+WORD(constant,constant,  enter, create, 
+                                zero, bangflags, bangname, bangcon, dup, linkbang,
+                                dup, param, // n lna pfa
+                                rot, swap, bang, linkbang)
+WORD(!var,    bangvar,   enter, lit, dovar, bangcode)
+WORD(variable,variable,  enter, create,
+                                zero, bangflags, bangname, bangvar, dup, linkbang,
+                                dup, param, 
+                                rot, swap, bang, linkbang)
 WORD(isimmed, isimmed,   enter, lit, (S)((I)offsetof(struct word_entry,flags) -
                                      offsetof(struct word_entry,code)), add, at)
 WORD(compile, compile,   enter, lit, 'C', emit, space,
