@@ -58,6 +58,7 @@ CODE(<,      less, POP(CX),POP(BX),MOVAXI(0xffff),CMP(,R,BX,CX),JL,2,INC_(R,AX),
 CODE(>,      more, POP(CX),POP(BX),MOVAXI(0xffff),CMP(,R,BX,CX),JG,2,INC_(R,AX),PUSH(AX))
 CODE(not,    not,      POP(AX), NOT(R,AX), PUSH(AX))
 CODE(1+,     oneplus,  MOV(,R,BX,SP), INC_(B,BX_),0)
+CODE(2+,     twoplus,  MOV(,R,BX,SP), INC_(B,BX_),0, INC_(B,BX_),0)
 CODE(1-,     oneminus, MOV(,R,BX,SP), DEC_(B,BX_),0)
 CODE(+,      add,      POP(AX), POP(BX), ADD(,R,AX,BX), PUSH(AX))
 CODE(-,      sub,      POP(AX), MOV(,R,BX,SP), SUB(F,B,AX,BX_),0)
@@ -200,13 +201,25 @@ WORD(number,  number,    enter, drop, zero,                               // a n
                                   swap, oneplus, swap,              //(3) // a' n'
                                   branch, -19,                      //(2)
                                 drop, swap, drop)                         // n
-WORD(compile, compile,   enter, error)
 WORD(state,   state,     dovar, 0)
+WORD(!link,   banglink,  enter, latest, over, bang)
+WORD(!colon,  bangcolon, enter, lit, enter, 
+                                over, lit, offsetof( struct word_entry, code ), add, bang)
+WORD(@param,  atparam,   enter, dup, lit, offsetof( struct word_entry, param ), add)
+WORD(],       rbracket,  enter, one, state, bang)
+WORD([,       lbracket,  enter, zero, state, bang)
+WORD(create,  create,    enter, here, lit, sizeof(struct word_entry), allot, banglink)
+WORD(:,       colon,     enter, create, bangcolon, rbracket, atparam)
+WORD(;,       semi,      enter, drop, lit, latest+2, bang, lbracket)
+WORD(compile, compile,   enter, over, bang, twoplus)
+WORD(complit, complit,   enter, swap, dup, lit, lit, swap, bang,
+                                twoplus, swap, over, bang,
+                                twoplus)
 WORD(execomp, execomp,   enter, state, at, zbranch, 3, 
                                 compile, branch, 1,
                                 execute)
 WORD(literal, literal,   enter, state, at, zbranch, 3,
-                                error, branch, 1,
+                                complit, branch, 1,
                                 nrot)
 WORD(iexec,   iexec,     enter, nrot, drop, drop, nrot, // c a n
                                 to_r, to_r, execomp, from_r, from_r) // ...c? a n
