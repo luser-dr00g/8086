@@ -182,7 +182,7 @@ WORD(parse,   parse,     enter, //twodup, type, space,
                                 dup, zmore, zbranch, 2, 
                                   pspace, pnspace)//, twodup, type, space)
 CODE(bye,     bye,       HALT)
-CODE(errout,  errout,    JMPAX(bye+2)) //patched to (quit) later
+WORD(errout,  errout,    enter, bye) //patched to (quit) later
 WORD(error,   error,     enter, lit, 'E', emit, lit, 'R', emit, lit, 'R', emit,
                                 dot, dot, dot, cr,
                                 errout)
@@ -258,16 +258,14 @@ WORD(test,    test,      enter,
                                 test3, test4, test5, test6,
                                 test7, test8, //test9, cr, test10, cr,
                                 test11) //test12, cr, test13, cr,
-                                //test14, cr,
-                                //test15,
-                                //bye)
+                                //test14, cr, //test15, //bye)
 WORD(accept,    accept,    enter, readline, interpret)
 CODE(resetsp,   resetsp,   MOVSPI(0xf000))
 CODE(resetrsp,  resetrsp,  MOVBPI(0x0100))
 WORD(quit,      quit,      enter, resetsp, accept, ok, branch, -4)
 WORD(abort,     abort,     enter, resetrsp, quit)
 HEADLESS(cold,  cold,      MOVSII(abort+2))
-memcpy( start+errout+3, (US[]){ quit }, 2 );
+memcpy( start+errout+2, (US[]){ quit }, 2 );
 memcpy( start+here+2, (US[]){ p-start }, 2 );
 memcpy( start+latest+2, (US[]){ link }, 2 );
 memcpy( p, "Hello world!", 12 );
