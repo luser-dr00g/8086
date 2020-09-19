@@ -151,10 +151,11 @@ WORD(words,   words,     enter, zero, latest,
                                   at,                      //(1)
                                   dup, zeq, zbranch, -12,  //(4)
                                 drop, drop)
-WORD(buffer,  buffer,    dostr, buffer+6, MAX_WORD_PARAM*2 - 4 + 20)
-p+=20;
+#define BUFFER_SIZE 100
+WORD(buffer,  buffer,    dostr, buffer+6, BUFFER_SIZE)
+p += BUFFER_SIZE;
 WORD(setbuf,  setbuf,    enter, lit, buffer+4, bang, lit, buffer+2, bang)
-WORD(resetbuf,resetbuf,  enter, lit, buffer+6, lit, MAX_WORD_PARAM*2 - 4 + 20, setbuf)
+WORD(resetbuf,resetbuf,  enter, lit, buffer+6, lit, BUFFER_SIZE, setbuf)
 WORD(readline,readline,  enter, resetbuf, buffer, drop, dup, // a a
                                   key, //dup, udot,          // a a k
                                   swap, twodup, bang,        // a k a  (a!k)
@@ -230,12 +231,14 @@ WORD(!code,   bangcode,  enter, over, lit, offsetof(struct word_entry,code), add
 WORD(!colon,  bangcolon, enter, lit, enter, bangcode)
 WORD(!con,    bangcon,   enter, lit, docon, bangcode)
 WORD(!var,    bangvar,   enter, lit, dovar, bangcode)
-WORD(param,   param,     enter, lit, offsetof(struct word_entry,param), add)
+WORD(param,   param,     enter, lit, offsetof(struct word_entry,code)+sizeof(US), add)
 WORD(link!,   linkbang,  enter, lit, latest+2, bang) 
 WORD(create,  create,    enter, here, lit, sizeof(struct word_entry), allot, 
                                 banglink)
 WORD(bradr,   bradr,     dovar, 0)
+p += 40;
 WORD(doadr,   doadr,     dovar, 0)
+p += 40;
 #define COMMA ,
 WORD(COMMA,   comma,     enter, over, bang, twoplus)
 WORD(],       rbracket,  enter, true, state, bang)

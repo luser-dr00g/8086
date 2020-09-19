@@ -25,7 +25,7 @@ struct word_entry {
   US name_len;
   UC name[ MAX_NAME ];
   US code;
-  US param[ MAX_WORD_PARAM ];
+  //US param[ MAX_WORD_PARAM ];
 };
 
 #define NAMESTRING(...) # __VA_ARGS__
@@ -48,9 +48,9 @@ struct word_entry {
     /*US code = P_PARAM_PTR;*/					\
     /*memcpy( p, &code, sizeof code };*/			\
     /*p += sizeof(US);*/					\
-    UC param[] = { __VA_ARGS__ , NEXT };			\
-    memcpy( p, param, sizeof param );				\
-    p += sizeof param;						\
+    UC params[] = { __VA_ARGS__ , NEXT };			\
+    memcpy( p, params, sizeof params );				\
+    p += sizeof params;						\
   } 								\
 /*end CODE()*/
 
@@ -71,9 +71,9 @@ struct word_entry {
     memcpy( p, &x, sizeof x );					\
     if(trace)printf("%s:%x ", #e, e);				\
     p += sizeof x;						\
-    UC param[] = { __VA_ARGS__ , NEXT };			\
-    memcpy( p, param, sizeof param );				\
-    p += sizeof param;						\
+    UC params[] = { __VA_ARGS__ , NEXT };			\
+    memcpy( p, params, sizeof params );				\
+    p += sizeof params;						\
   }
 /*end HEADLESS()*/
 
@@ -89,12 +89,15 @@ struct word_entry {
       .name_len = sizeof(  NAMESTRING(namestring)  ) - 1, 	\
       .name     = NAMESTRING(namestring) ,			\
       .code     = codeword ,	 				\
-      .param    = { __VA_ARGS__ , c_exit } 			\
+      /*.param    = { __VA_ARGS__ , c_exit }*/ 			\
     }; 								\
     link = p - start;						\
     memcpy( p, &x, sizeof x ); 					\
     if(trace)printf("%s:%x ", #cname, cname);			\
     p += sizeof x; 						\
+    US params[] = { __VA_ARGS__ , c_exit };			\
+    memcpy( p, params, sizeof params );				\
+    p += sizeof params;						\
   } 								\
 /*end WORD()*/
 
