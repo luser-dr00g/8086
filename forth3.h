@@ -137,9 +137,10 @@ WORD(.digits, dotdigits, enter,   swap, dotemit, oneminus, dup, zeq, zbranch, -7
 WORD(u.,      udot,      enter, dotexpand, dotdigits, space)
 WORD(.,       dot,       enter, dotsign, udot)
 WORD(ok,      ok,        enter, lit,'O',emit, lit,'K',emit, cr)
+WORD(dp,      dp,        dovar, 0)
 WORD(latest,  latest,    docon, 0)
-WORD(here,    here,      docon, 0)
-WORD(allot,   allot,     enter, lit, here+2, plusbang)
+WORD(here,    here,      enter, dp, at)
+WORD(allot,   allot,     enter, dp, plusbang)
 WORD(ename,   ename,     enter, dup, lit, offsetof( struct code_entry, name_len ), add, cat,
                                 swap, lit, offsetof( struct code_entry, name ), add, swap)
 WORD(ecode,   ecode,     enter, lit, offsetof( struct code_entry, code ), add)
@@ -392,7 +393,7 @@ WORD(quit,      quit,      enter, resetsp, accept, ok, branch, -4)
 WORD(abort,     abort,     enter, resetrsp, quit)
 HEADLESS(cold,  cold,      MOVSII(abort+2))
 memcpy( start+errout+2, (US[]){ quit }, 2 );
-memcpy( start+here+2, (US[]){ p-start }, 2 );
+memcpy( start+dp+2, (US[]){ p-start }, 2 );
 memcpy( start+latest+2, (US[]){ link }, 2 );
 memcpy( p, "Hello world!", 12 );
 nop_();
