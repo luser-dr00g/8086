@@ -16,6 +16,7 @@ static inline int
 forth(char *start){
 char *p = start;
 unsigned link = 0;
+enum flag { immediate = 1, smudged = 2 };
 unsigned flags = 0;
 trace=0;
 { UC x[] = { HALT, 00, 00 };
@@ -233,8 +234,8 @@ WORD(!con,    bangcon,   enter, lit, docon, bangcode)
 WORD(!var,    bangvar,   enter, lit, dovar, bangcode)
 WORD(param,   param,     enter, lit, offsetof(struct word_entry,code)+sizeof(US), add)
 WORD(link!,   linkbang,  enter, lit, latest+2, bang) 
-WORD(create,  create,    enter, here, lit, sizeof(struct word_entry), allot, 
-                                banglink)
+WORD(create,  create,    enter, here, lit, sizeof(struct word_entry)+MAX_WORD_PARAM*2,
+                                allot, banglink)
 WORD(bradr,   bradr,     dovar, 0)
 p += 40;
 WORD(doadr,   doadr,     dovar, 0)
@@ -242,7 +243,7 @@ p += 40;
 #define COMMA ,
 WORD(COMMA,   comma,     enter, over, bang, twoplus)
 WORD(],       rbracket,  enter, true, state, bang)
-flags=1;
+flags=immediate;
 WORD([,       lbracket,  enter, zero, state, bang)
 WORD(if,      if_,       enter, //lit, 'I', emit, dup, dot,
                                 lit, zbranch, comma,  //dup, dot,
