@@ -24,16 +24,12 @@ trace=0;
 HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX))
 HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dovar, dovar, MOV(,R,BX,AX), LEA(,B,AX,BX_),2, PUSH(AX))
-HEADLESS(dostr, dostr, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, MOV(,B,CX,BX_),4,
-                       PUSH(AX),PUSH(CX))
+HEADLESS(dostr, dostr, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, MOV(,B,CX,BX_),4, PUSH(AX),PUSH(CX))
 CODE(push,   push,     POP(BX), POP(AX), INC_(Z,BX_), 
-                       MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX), 
-                       MOV(F,Z,AX,DI_))
-CODE(peek,   peek,     POP(BX),
-                       MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX),
+                       MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX),  MOV(F,Z,AX,DI_))
+CODE(peek,   peek,     POP(BX),  MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX),
                        MOV(,Z,AX,DI_), PUSH(AX))
-CODE(pop,    pop,      POP(BX), 
-                       MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX), 
+CODE(pop,    pop,      POP(BX),  MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX), 
                        MOV(,Z,AX,DI_), DEC_(Z,BX_), PUSH(AX))
 CODE(execute,execute,  POP(BX), MOV(,R,AX,BX), MOV(,B,BX,BX_),0, JMP_(R,BX))
 CODE(exit,   c_exit,   POPRSP(SI))
@@ -122,6 +118,9 @@ WORD(5,       five,      docon, 5)
 WORD(10,      ten,       docon, 10)
 WORD(var,     var,       dovar, 42)
 WORD(base,    base,      dovar, 10)
+WORD(hex,     hex,       enter, lit, 16, base, bang)
+WORD(decimal, decimal,   enter, lit, 10, base, bang)
+WORD(octal,   octal,     enter, lit, 8, base, bang)
 WORD(cr,      cr,        enter, lit,'\n', emit)
 WORD(space,   space,     enter, lit,' ', emit)
 WORD(.sign,   dotsign,   enter, dup, zless, zbranch, 4, lit, '-', emit, minus)
@@ -152,9 +151,9 @@ WORD(words,   words,     enter, zero, latest,
                                   dup, zeq, zbranch, -12,  //(4)
                                 drop, drop)
 WORD(buffer,  buffer,    dostr, buffer+6, MAX_WORD_PARAM*2 - 4 + 20)
+p+=20;
 WORD(setbuf,  setbuf,    enter, lit, buffer+4, bang, lit, buffer+2, bang)
 WORD(resetbuf,resetbuf,  enter, lit, buffer+6, lit, MAX_WORD_PARAM*2 - 4 + 20, setbuf)
-p+=20;
 WORD(readline,readline,  enter, resetbuf, buffer, drop, dup, // a a
                                   key, //dup, udot,          // a a k
                                   swap, twodup, bang,        // a k a  (a!k)
@@ -228,13 +227,16 @@ WORD(!name,   bangname,  enter, parse, dup,
                                 twopick, lit, offsetof(struct word_entry,name), add, sbang)
 WORD(!code,   bangcode,  enter, over, lit, offsetof(struct word_entry,code), add, bang)
 WORD(!colon,  bangcolon, enter, lit, enter, bangcode)
+WORD(!con,    bangcon,   enter, lit, docon, bangcode)
+WORD(!var,    bangvar,   enter, lit, dovar, bangcode)
 WORD(param,   param,     enter, lit, offsetof(struct word_entry,param), add)
 WORD(link!,   linkbang,  enter, lit, latest+2, bang) 
 WORD(create,  create,    enter, here, lit, sizeof(struct word_entry), allot, 
                                 banglink)
 WORD(bradr,   bradr,     dovar, 0)
 WORD(doadr,   doadr,     dovar, 0)
-WORD(comma,   comma,     enter, over, bang, twoplus)
+#define COMMA ,
+WORD(COMMA,   comma,     enter, over, bang, twoplus)
 WORD(],       rbracket,  enter, true, state, bang)
 flags=1;
 WORD([,       lbracket,  enter, zero, state, bang)
@@ -266,28 +268,28 @@ WORD(while,   while_,    enter, //lit, 'W', emit, dup, dot, cr,
 WORD(2trcom,  twotrcom,  enter, lit, to_r, comma, lit, to_r, comma)
 WORD(2frcom,  twofrcom,  enter, lit, from_r, comma, lit, from_r, comma)
 WORD(2drcom,  twodrcom,  enter, twofrcom, lit, twodrop, comma)
-WORD(do,      do_,       enter, lit, 'D', emit,
+WORD(do,      do_,       enter, //lit, 'D', emit,
                                 twotrcom,
                                 dup, doadr, push)
-WORD(loop,    loop,      enter, lit, 'O', emit,
+WORD(loop,    loop,      enter, //lit, 'O', emit,
                                 twofrcom,
                                 lit, oneplus, comma, 
                                 lit, twodup, comma, lit, eq, comma,
                                 lit, onbranch, comma, lit, 4, comma,
                                 twotrcom,
                                 lit, branch, comma, dobrch, twodrcom)
-WORD(+loop,   plusloop,  enter, lit, '+', emit,
+WORD(+loop,   plusloop,  enter, //lit, '+', emit,
                                 twofrcom,
                                 lit, rot, comma, lit, add, comma,
                                 lit, twodup, comma, lit, more, comma,
                                 lit, zbranch, comma, lit, 4, comma,
                                 twotrcom,
                                 lit, branch, comma, dobrch, twodrcom)
-WORD(leave,   leave,     enter, lit, 'X', emit,
+WORD(leave,   leave,     enter, //lit, 'X', emit,
                                 twofrcom,
                                 lit, drop, comma, lit, dup, comma, lit, oneminus, comma,
                                 twotrcom)
-WORD(i,       i_,        enter, lit, 'i', emit,
+WORD(i,       i_,        enter, //lit, 'i', emit,
                                 twofrcom,
                                 lit, dup, comma, lit, nrot, comma,
                                 twotrcom)
@@ -300,16 +302,12 @@ WORD(:,       colon,     enter, //lit, ':', emit,
                                 zero, bangflags, bangname, bangcolon, dup, linkbang, 
                                 dup, param,
                                 rbracket)//, twodup, udot, udot)
-WORD(!con,    bangcon,   enter, lit, docon, bangcode)
 WORD(constant,constant,  enter, create, 
                                 zero, bangflags, bangname, bangcon, dup, linkbang,
-                                dup, param, // n lna pfa
-                                rot, swap, bang, linkbang)
-WORD(!var,    bangvar,   enter, lit, dovar, bangcode)
+                                dup, param, rot, swap, bang, linkbang)
 WORD(variable,variable,  enter, create,
                                 zero, bangflags, bangname, bangvar, dup, linkbang,
-                                dup, param, 
-                                rot, swap, bang, linkbang)
+                                dup, param, rot, swap, bang, linkbang)
 WORD(isimmed, isimmed,   enter, lit, (S)((I)offsetof(struct word_entry,flags) -
                                      offsetof(struct word_entry,code)), add, at)
 WORD(compile, compile,   enter, //lit, 'C', emit, space,
