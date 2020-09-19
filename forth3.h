@@ -314,7 +314,8 @@ WORD(variable,variable,  enter, create,
                                 zero, bangflags, bangname, bangvar, dup, linkbang,
                                 dup, param, rot, swap, bang, linkbang)
 WORD(isimmed, isimmed,   enter, lit, (S)((I)offsetof(struct word_entry,flags) -
-                                     offsetof(struct word_entry,code)), add, at)
+                                     offsetof(struct word_entry,code)), add, at,
+                                lit, immediate, and)
 WORD(compile, compile,   enter, //lit, 'C', emit, space,
                                 //threedup, dot, dot, dot,
                                 dup, isimmed, onbranch, 5, 
