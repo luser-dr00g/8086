@@ -141,13 +141,13 @@ WORD(dp,      dp,        dovar, 0)
 WORD(latest,  latest,    docon, 0)
 WORD(here,    here,      enter, dp, at)
 WORD(allot,   allot,     enter, dp, plusbang)
-WORD(ename,   ename,     enter, dup, lit, offsetof( struct code_entry, name_len ), add, cat,
+WORD(nfan,    nfan,      enter, dup, lit, offsetof( struct code_entry, name_len ), add, at,
                                 swap, lit, offsetof( struct code_entry, name ), add, swap)
-WORD(ecode,   ecode,     enter, lit, offsetof( struct code_entry, code ), add)
+WORD(cfa,     cfa,       enter, lit, offsetof( struct code_entry, code ), add)
 WORD(words,   words,     enter, zero, latest,
                                   swap, //dup, udot,       //(1/3)
                                   oneplus, swap,           //(2)
-                                  dup, ename, type, space, //(4)
+                                  dup, nfan, type, space, //(4)
                                   at,                      //(1)
                                   dup, zeq, zbranch, -12,  //(4)
                                 drop, drop)
@@ -163,7 +163,7 @@ WORD(readline,readline,  enter, resetbuf, buffer, drop, dup, // a a
                                 lit, ' '|(' '<<8), over, oneminus, bang,
                                 over, sub, setbuf)
 WORD(findloop,findloop,  enter, nrot,  // latest adr n
-                                  threedup, rot, ename, //(3) // l a n a n a' n'
+                                  threedup, rot, nfan, //(3) // l a n a n a' n'
                                   //twodup, type, space,  //(3)
                                   seq, onbranch, 9, //(3) // l a n (b:a=a')
                                   rot, at, dup, zeq, onbranch, 4, //(6) //a n l@ (b:0=l@)
@@ -173,7 +173,7 @@ WORD(findloop,findloop,  enter, nrot,  // latest adr n
                                   rot) //a n l(@*)|0
 WORD(find,    find,      enter, latest, findloop,
                                 dup, zeq, not, zbranch, 1,
-                                  ecode)
+                                  cfa)
 WORD(pspace1, pspace1,   enter, //dup, dot,
                                 rot, twodup, swap, sub, swap, drop, // ad sp n-sp
                                 nrot, add, swap)       // ad+sp n-sp
@@ -224,7 +224,7 @@ WORD(state,   state,     dovar, 0)
 WORD(!link,   banglink,  enter, latest, over, bang)
 WORD(!flags,  bangflags, enter, over, lit, offsetof(struct word_entry,flags), add, bang)
 WORD(!name,   bangname,  enter, parse, dup,
-                                threepick,lit,offsetof(struct word_entry,name_len),add,cbang,
+                                threepick,lit,offsetof(struct word_entry,name_len),add,bang,
                                 twopick, lit, offsetof(struct word_entry,name), add, sbang)
 WORD(!code,   bangcode,  enter, over, lit, offsetof(struct word_entry,code), add, bang)
 WORD(!colon,  bangcolon, enter, lit, enter, bangcode)
@@ -359,7 +359,7 @@ WORD(test8,   test8,     enter, lit, 'w', emit, lit, 'o', emit, lit, 'r', emit,
 WORD(test9,   test9,     enter, readline, buffer, //twodup, udot, udot,
                                 type, ok)
 WORD(test10,  test10,    enter, readline, buffer, twodup, dup, dot, type, space,
-                                latest, ename, twodup, dup, dot, type, space, 
+                                latest, nfan, twodup, dup, dot, type, space, 
                                 seq, dot, cr)
 WORD(test11,  test11,    enter, five, four, three, two, one,
                                 zero, pick, dot,
