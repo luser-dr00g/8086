@@ -232,38 +232,39 @@ WORD(!code,   bangcode,  enter, over, lit, offsetof(struct word_entry,code), add
 WORD(!colon,  bangcolon, enter, lit, enter, bangcode)
 WORD(!con,    bangcon,   enter, lit, docon, bangcode)
 WORD(!var,    bangvar,   enter, lit, dovar, bangcode)
-WORD(param,   param,     enter, lit, offsetof(struct word_entry,code)+sizeof(US), add)
+//WORD(param,   param,     enter, lit, offsetof(struct word_entry,code)+sizeof(US), add)
 WORD(link!,   linkbang,  enter, lit, latest+2, bang) 
-WORD(create,  create,    enter, here, lit, sizeof(struct word_entry)+MAX_WORD_PARAM*2,
-                                allot, banglink)
+WORD(create,  create,    enter, here, 
+                                lit, sizeof(struct word_entry), allot,
+                                banglink)
 WORD(bradr,   bradr,     dovar, 0)
 p += 40;
 WORD(doadr,   doadr,     dovar, 0)
 p += 40;
 #define COMMA ,
-WORD(COMMA,   comma,     enter, over, bang, twoplus)
+WORD(COMMA,   comma,     enter, here, bang, two, allot)//over, bang, twoplus)
 WORD(],       rbracket,  enter, true, state, bang)
 flags=immediate;
 WORD([,       lbracket,  enter, zero, state, bang)
 WORD(if,      if_,       enter, //lit, 'I', emit, dup, dot,
                                 lit, zbranch, comma,  //dup, dot,
-                                dup, bradr, push, twoplus)
+                                here, bradr, push, twoplus)
 WORD(else,    else_,     enter, //lit, 'E', emit, dup, dot,
                                 lit, branch, comma,  //dup, dot, cr,
-                                dup, bradr, peek, sub, two, div, //dup, dot, cr,
-                                bradr, pop, bang,
-                                dup, bradr, push, twoplus)
+                                here, bradr, peek, sub, two, div, //dup, dot, cr,
+                                  bradr, pop, bang,
+                                here, bradr, push, zero, comma)
 WORD(then,    then,      enter, //lit, 'T', emit,
-                                dup, bradr, peek, twoplus, sub, two, div, //dup, dot, cr,
-                                bradr, pop, bang,
-                                dup, bradr, bang)
+                                here, bradr, peek, twoplus, sub, two, div, //dup, dot, cr,
+				    bradr, pop, bang,
+                                here, bradr, bang)
 WORD(endif,   endif,     enter, then)
 WORD(begin,   begin,     enter, //lit, 'B', emit, dup, dot, cr,
-                                dup, bradr, push)
-WORD(bckbrch, bckbrch,   enter, dup, twoplus, bradr, pop, sub, two, div, minus,//dup,dot,cr,
-                                over, bang, twoplus)
-WORD(dobrch,  dobrch,    enter, dup, twoplus, doadr, pop, sub, two, div, minus,//dup,dot,cr,
-                                over, bang, twoplus)
+                                here, bradr, push)
+WORD(bckbrch, bckbrch,   enter, here, twoplus, bradr, pop, sub, two, div, minus,//dup,dot,cr,
+                                comma)
+WORD(dobrch,  dobrch,    enter, here, twoplus, doadr, pop, sub, two, div, minus,//dup,dot,cr,
+                                comma)
 WORD(repeat,  repeat,    enter, //lit, 'R', emit, dup, dot, cr,
                                 lit, branch, comma,  bckbrch)
 WORD(until,   until,     enter, //lit, 'U', emit, dup, dot, cr,
@@ -275,7 +276,7 @@ WORD(2frcom,  twofrcom,  enter, lit, from_r, comma, lit, from_r, comma)
 WORD(2drcom,  twodrcom,  enter, twofrcom, lit, twodrop, comma)
 WORD(do,      do_,       enter, //lit, 'D', emit,
                                 twotrcom,
-                                dup, doadr, push)
+                                here, doadr, push)
 WORD(loop,    loop,      enter, //lit, 'O', emit,
                                 twofrcom,
                                 lit, oneplus, comma, 
@@ -299,27 +300,29 @@ WORD(i,       i_,        enter, //lit, 'i', emit,
                                 lit, dup, comma, lit, nrot, comma,
                                 twotrcom)
 WORD(;,       semi,      enter, //lit, ';', emit,
-                                lit, c_exit, over, bang, //latest, dot, twodup, dot, dot,
-                                drop, drop, lbracket)
+                                lit, c_exit, comma, //latest, dot, twodup, dot, dot,
+                                lbracket)
 flags=0;
 WORD(:,       colon,     enter, //lit, ':', emit,
                                 create, 
-                                zero, bangflags, bangname, bangcolon, dup, linkbang, 
-                                dup, param,
+                                lit, smudged, bangflags, bangname, bangcolon, dup, linkbang, 
+                                //dup, //param,
                                 rbracket)//, twodup, udot, udot)
 WORD(constant,constant,  enter, create, 
                                 zero, bangflags, bangname, bangcon, dup, linkbang,
-                                dup, param, rot, swap, bang, linkbang)
+                                //dup, //param, rot, swap, bang, 
+                                swap, comma)
 WORD(variable,variable,  enter, create,
                                 zero, bangflags, bangname, bangvar, dup, linkbang,
-                                dup, param, rot, swap, bang, linkbang)
+                                //dup, //param, rot, swap, bang,
+                                swap, comma)
 WORD(isimmed, isimmed,   enter, lit, (S)((I)offsetof(struct word_entry,flags) -
                                      offsetof(struct word_entry,code)), add, at,
                                 lit, immediate, and)
 WORD(compile, compile,   enter, //lit, 'C', emit, space,
                                 //threedup, dot, dot, dot,
-                                dup, isimmed, onbranch, 5, 
-                                  over, bang, twoplus, branch, 1,
+                                dup, isimmed, onbranch, 3, 
+                                  comma, branch, 1,
                                   execute)
 WORD(complit, complit,   enter, //lit, 'L', emit, space,
                                 //threedup, dot, dot, dot,
