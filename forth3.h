@@ -176,33 +176,34 @@ WORD(findloop,findloop,  enter, nrot,  // latest adr n
 WORD(find,    find,      enter, latest, findloop,
                                 dup, zeq, not, zbranch, 1,
                                   cfa)
-WORD(pspace1, pspace1,   enter, //dup, dot,
-                                rot, twodup, swap, sub, swap, drop, // ad sp n-sp
-                                nrot, add, swap)       // ad+sp n-sp
-WORD(pspace,  pspace,    enter, swap, zero,            // n ad sp
-                                  twodup, add, cat,    // n ad sp ad[sp]
-                                  swap, oneplus, swap, // n ad sp++ ad[sp]
-                                  lit, ' ', ne, zbranch, -11,
-                                oneminus,              // n ad sp
-                                pspace1)
-WORD(pnspace2,pnspace2,  enter, //dup, dot, 
-                                swap, to_r,             // n sp
+WORD(pdelim1, pdelim1,   enter, //dup, dot,
+                                rot, twodup, swap, sub, swap, drop, // del ad sp n-sp
+                                nrot, add, swap)       // del ad+sp n-sp
+WORD(pdelim,  pdelim,    enter, nrot, swap, zero,      // del n ad sp
+                                  twodup, add, cat,    // del n ad sp ad[sp]
+                                  swap, oneplus, swap, // del n ad sp++ ad[sp]
+                                  four, pick, ne, zbranch, -11,
+                                oneminus,              // del n ad sp
+                                pdelim1)
+WORD(pndelim2,pndelim2,  enter, //dup, dot, 
+                                swap, to_r, rot, drop,  // n sp
                                 twodup, sub, rot, drop, // sp n-sp
                                 over, r, add, swap, setbuf, // sp   (buf[ad+sp n-sp])
                                 from_r, swap,          // ad sp
                                 dup, zmore, zbranch, 1, c_exit, drop, zero)
-WORD(pnspace1,pnspace1,  enter, swap, zero,            // n ad sp=0
-                                  twodup, add, cat,    // n ad sp ad[sp]
-                                  swap, oneplus, swap, // n ad sp++ ad[sp]
-                                  lit, ' ', eq, zbranch, -11,
-                                oneminus,              // n ad sp
-                                pnspace2)
-WORD(pnspace, pnspace,   enter, dup, zmore, zbranch, 2, // ad n
-                                  pnspace1, c_exit,
-                                drop, zero)
+WORD(pndelim1,pndelim1,  enter, swap, zero,            // del n ad sp=0
+                                  twodup, add, cat,    // del n ad sp ad[sp]
+                                  swap, oneplus, swap, // del n ad sp++ ad[sp]
+                                  four, pick, eq, zbranch, -11,
+                                oneminus,              // del n ad sp
+                                pndelim2)
+WORD(pndelim, pndelim,   enter, dup, zmore, zbranch, 2, // del ad n
+                                  pndelim1, c_exit,
+                                drop, swap, drop, zero)
+WORD(word,    word,      enter, pdelim, pndelim)//, twodup, type, space)
 WORD(parse,   parse,     enter, buffer, //twodup, type, space, 
                                 dup, zmore, zbranch, 2, 
-                                  pspace, pnspace)//, twodup, type, space)
+                                lit, ' ', word)
 CODE(bye,     bye,       HALT)
 WORD(errout,  errout,    enter, bye) //patched to (quit) later
 WORD(error,   error,     enter, lit, 'E', emit, lit, 'R', emit, lit, 'R', emit,
