@@ -295,6 +295,19 @@ WORD(brsave,  brsave,    enter, here, bradr, push)
 WORD(brpatch, brpatch,   enter, //here,
                                 bradr, peek, sub, two, div, //dup, dot, cr,
                                   bradr, pop, bang)
+WORD(if,      if_,       enter, compile, zbranch,
+                                here, zero, comma,
+                                two)
+WORD(endif,   endif,     enter, two, eq, onbranch, 1, error,
+                                here, over, twoplus, sub, two, div, swap, bang)
+WORD(then,    then,      enter, endif)
+WORD(else,    else_,     enter, two, eq, onbranch, 1, error,
+                                compile, branch,
+                                here, zero, comma,
+                                swap, here, over,  // h if h' if
+                                twoplus, sub, two, div, swap, bang, // h h'-if/2!if
+                                two)
+     /*
 WORD(if,      if_,       enter, //lit, 'I', emit, 
                                 compile, zbranch,
                                 brsave, zero, comma)
@@ -305,6 +318,7 @@ WORD(else,    else_,     enter, //lit, 'E', emit,
 WORD(then,    then,      enter, //lit, 'T', emit,
                                 here, twominus, brpatch)
 WORD(endif,   endif,     enter, then)
+*/
 
 WORD(besave,  besave,    enter, here, beadr, push)
 WORD(whsave,  whsave,    enter, here, whadr, push)
