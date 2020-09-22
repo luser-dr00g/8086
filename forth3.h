@@ -169,6 +169,7 @@ WORD(words,   words,     enter, zero, latest,
 
 WORD(>in,     to_in,     dovar, 0);
 WORD(pad,     pad,       dovar, 0);
+WORD(blk,     blk,       dovar, 0);
 p += 64;
 #define BUFFER_SIZE 100
 WORD(buffer,  buffer,    dostr, buffer+6, BUFFER_SIZE)
@@ -360,8 +361,9 @@ WORD(."",     dotquote,  enter, lit, '"', word,
                                 lit, lit, comma, from_r, comma,
                                 lit, lit, comma, from_r, comma,
                                 lit, type, comma)
-//memcpy( start+link+4, (US[]){ 2 }, sizeof(US) );
 ((struct word_entry *)(start+link))->name_len = 2;
+WORD((),  lparen,    enter, lit, ')', word, twodrop)
+((struct word_entry *)(start+link))->name_len = 1;
 
 WORD(;,       semi,      enter, //lit, ';', emit,
                                 lit, c_exit, comma, //latest, dot, twodup, dot, dot,
