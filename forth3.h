@@ -113,11 +113,19 @@ CODE(s=,     seq,      POP(CX), POP(DX), POP(BX), POP(AX), PUSH(SI), STD,
                          DEC_(R,CX), JNZ, -7,         //(4)
                        POP(SI), PUSH(BX))
 //*
-WORD(cmove,   cmove,     enter, // a n adr
-                                swap, rot, // n adr a
+CODE(cmove,   cmove,   //INT(15), 
+                       POP(CX), POP(DX), POP(AX), PUSH(SI), CLD,
+                       OR(,R,CX,CX), JZ, 9,
+                         MOV(,R,SI,AX), MOV(,R,DI,DX), //(4)
+                         BYTE+MOVS, DEC_(R,CX), JNZ, -5, //(5)
+                       POP(SI)//, INT(15)
+                       )/**/
+/*
+WORD(cmove,   cmove,     enter, // a1 a2 n
+                                swap, rot, // n a2 a1
                                   twopick, zeq, onbranch, 12, //(4)
-                                  twodup, cat, swap, cbang, //(4)  // n adr a  (adr!a@)
-                                  rot, oneminus, rot, oneplus, rot, oneplus, //(6) n- adr+ a+
+                                  twodup, cat, swap, cbang, //(4)  // n a2 a1  (a2!a1@)
+                                  rot, oneminus, rot, oneplus, rot, oneplus,//(6) n- a2+ a1+
                                   branch, -16, //(2)
                                 drop, drop, drop)
 				/**/
@@ -150,6 +158,7 @@ WORD(.digits, dotdigits, enter,   swap, dotemit, oneminus, dup, zeq, zbranch, -7
                                 drop)
 WORD(u.,      udot,      enter, dotexpand, dotdigits, space)
 WORD(.,       dot,       enter, dotsign, udot)
+WORD(?,       quest,     enter, at, dot)
 WORD(ok,      ok,        enter, lit,'O',emit, lit,'K',emit, cr)
 
 WORD(dp,      dp,        dovar, 0) // patched to end of dictionary later

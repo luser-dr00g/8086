@@ -68,6 +68,7 @@ US fetchw(){I w=fetchb();R w|(fetchb()<<8);}
 void interrupt( UC no ){
   switch(no){
   CASE 0x00: printf("div by zero trap\n");
+  CASE 0x15: trace = trace  ? 0  : 1;
   CASE 0x21: switch(bget(ah)){
              CASE 0x01: bput(al, getchar());
              CASE 0x02: //fputs( cp437tounicode( bget(dl) ), stdout );
@@ -234,7 +235,7 @@ U decseg(U sr){         // decode segment register
 #define mMOV if(d){ x=get_(mem+fetchw(),w); w?*ax=x:(*al=x); } \
              else { put_(mem+fetchw(),w?*ax:*al,w); }
 #define Offset (w+1)*(1-d*2) //(w,d)=? (0,0)=1 (1,0)=2 (0,1)=-1 (1,1)=-2
-#define MOVS put_(di,get_(si,w),w); *di+=Offset; *si+=Offset;
+#define MOVS put_(mem+wget(di),get_(mem+wget(si),w),w); *di+=Offset; *si+=Offset;
 #define CMPS x=(U)(mem+wget(si)); y=(U)(mem+wget(di)); d=!!(*fl&DF);\
              if(trace){ P("x:%d ",x); P("y:%d ",y); } \
              LDXY \
