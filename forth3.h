@@ -114,7 +114,7 @@ CODE(s=,     seq,      POP(CX), POP(DX), POP(BX), POP(AX), PUSH(SI), STD,
                        POP(SI), PUSH(BX))
 //*
 WORD(cmove,   cmove,     enter, // a n adr
-                                rot, // n adr a
+                                swap, rot, // n adr a
                                   twopick, zeq, onbranch, 12, //(4)
                                   twodup, cat, swap, cbang, //(4)  // n adr a  (adr!a@)
                                   rot, oneminus, rot, oneplus, rot, oneplus, //(6) n- adr+ a+
@@ -167,6 +167,7 @@ WORD(words,   words,     enter, zero, latest,
                                   dup, zeq, zbranch, -12,  //(4)
                                 drop, drop)
 
+WORD(>in,     to_in,     dovar, 0);
 WORD(pad,     pad,       dovar, 0);
 p += 64;
 #define BUFFER_SIZE 100
@@ -252,7 +253,7 @@ WORD(!name,   bangname,  enter, parse, dup, // lfa a n n
                                 threepick,lit,offsetof(struct word_entry,name_len),
                                 add, bang,
                                 twopick, lit, offsetof(struct word_entry,name),
-                                add, cmove)
+                                add, swap, cmove)
 WORD(!code,   bangcode,  enter, over, lit, offsetof(struct word_entry,code), add, bang)
 WORD(!colon,  bangcolon, enter, lit, enter, bangcode)
 WORD(!con,    bangcon,   enter, lit, docon, bangcode)
@@ -347,9 +348,20 @@ WORD(i,       i_,        enter, //lit, 'i', emit,
                                 lit, dup, comma, lit, nrot, comma,
                                 twotrcom)
 
-WORD(."",     dotquote,  enter, lit, '"', word//, type
-)
-memcpy( start+link+4, (US[]){ 2 }, sizeof(US) );
+WORD(."",     dotquote,  enter, lit, '"', word,
+                                swap, oneplus, swap, oneminus, 
+                                state, at, onbranch, 2,
+                                  type, c_exit,
+                                lit, branch, comma,
+                                dup, dup, one, and, sub, dup, two, div, comma,
+                                here, swap, allot,
+                                over, to_r, dup, to_r,
+                                swap, cmove,
+                                lit, lit, comma, from_r, comma,
+                                lit, lit, comma, from_r, comma,
+                                lit, type, comma)
+//memcpy( start+link+4, (US[]){ 2 }, sizeof(US) );
+((struct word_entry *)(start+link))->name_len = 2;
 
 WORD(;,       semi,      enter, //lit, ';', emit,
                                 lit, c_exit, comma, //latest, dot, twodup, dot, dot,
@@ -380,26 +392,28 @@ WORD(compile, compile,   enter, //lit, 'C', emit, space,
                                   execute)
 WORD(complit, complit,   enter, //lit, 'L', emit, space,
                                 //threedup, dot, dot, dot,
-                                swap, dup, lit, lit, swap, bang,
-                                twoplus, swap, over, bang,
-                                twoplus)
+                                lit, lit, comma, comma)
+                                //swap, dup, lit, lit, swap, bang,
+                                //twoplus, swap, over, bang,
+                                //twoplus)
 WORD(execomp, execomp,   enter, state, at, zbranch, 3, 
                                   compile, branch, 1,
                                   execute)
+
 WORD(literal, literal,   enter, state, at, zbranch, 1,
                                   complit)
 WORD(iexec,   iexec,     enter, nrot, drop, drop, // c
                                 execomp) // c?
 
 WORD(interpret,interpret,enter, //readline,                            // a n
-                                  parse,  //twodup, dot, dot,//twodup, type, space,//(1/4) // a' n'
-                                  dup, zmore, zbranch, 8,      //(4)
-                                  find, dup, zeq, onbranch, 5, //(5) // a' n' c (b:0=c)
-                                  iexec,                       //(1)
-                                  branch, -13,                 //(2)
-                                twodrop, c_exit,               //(2) // ...c?
-                                drop, number, literal,         //(3) // ...num 
-                                branch, -20)                   //(2)
+                                  parse,  //twodup, type, space,//(1/4) // a' n'
+                                  dup, zmore, zbranch, 8,       //(4)
+                                  find, dup, zeq, onbranch, 5,  //(5) // a' n' c (b:0=c)
+                                  iexec,                        //(1)
+                                  branch, -13,                  //(2)
+                                twodrop, c_exit,                //(2) // ...c?
+                                drop, number, literal,          //(3) // ...num 
+                                branch, -20)                    //(2)
 
 WORD(accept,    accept,    enter, readline, interpret)
 CODE(resetsp,   resetsp,   MOVSPI(0xf000))
