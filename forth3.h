@@ -286,6 +286,7 @@ p += 40;
 #define COMMA ,
 WORD(COMMA,   comma,     enter, //dup, dot, 
                                 here, bang, two, allot)
+WORD(compile, compile,   enter, from_r, dup, twoplus, to_r, at, comma)
 WORD(],       rbracket,  enter, true, state, bang)
 
 flags=immediate;
@@ -294,11 +295,11 @@ WORD(brsave,  brsave,    enter, here, bradr, push)
 WORD(brpatch, brpatch,   enter, //here,
                                 bradr, peek, sub, two, div, //dup, dot, cr,
                                   bradr, pop, bang)
-WORD(if,      if_,       enter, //lit, 'I', emit, dup, dot,
-                                lit, zbranch, comma,  //dup, dot,
+WORD(if,      if_,       enter, //lit, 'I', emit, 
+                                compile, zbranch,
                                 brsave, zero, comma)
-WORD(else,    else_,     enter, //lit, 'E', emit, dup, dot,
-                                lit, branch, comma,  //dup, dot, cr,
+WORD(else,    else_,     enter, //lit, 'E', emit,
+                                compile, branch,
                                 here, brpatch,
                                 brsave, zero, comma)
 WORD(then,    then,      enter, //lit, 'T', emit,
@@ -316,20 +317,20 @@ WORD(bebrch,  bebrch,    enter, twoplus, beadr, pop, sub, two, div, minus,//dup,
 WORD(begin,   begin,     enter, lit, 'B', emit, dup, //dot, cr,
                                 besave)
 WORD(until,   until,     enter, lit, 'U', emit, dup, //dot, cr,
-                                lit, zbranch, comma, 
+                                compile, zbranch, 
                                 here, bebrch)
 WORD(while,   while_,    enter, lit, 'W', emit, dup, //dot, cr,
-                                lit, zbranch, comma,
+                                compile, zbranch, 
                                 whsave, zero, comma)
 WORD(repeat,  repeat,    enter, lit, 'R', emit, dup, //dot, cr,
-                                lit, branch, comma, 
+                                compile, branch,
                                 here, bebrch,
                                 whadr, twoplus, at, zbranch, 2,
                                   here, whpatch)
 
-WORD(2trcom,  twotrcom,  enter, lit, to_r, comma, lit, to_r, comma)
-WORD(2frcom,  twofrcom,  enter, lit, from_r, comma, lit, from_r, comma)
-WORD(2drcom,  twodrcom,  enter, twofrcom, lit, twodrop, comma)
+WORD(2trcom,  twotrcom,  enter, compile, to_r, compile, to_r)
+WORD(2frcom,  twofrcom,  enter, compile, from_r, compile, from_r)
+WORD(2drcom,  twodrcom,  enter, twofrcom, compile, twodrop)
 WORD(dobrch,  dobrch,    enter, here, twoplus, doadr, pop, sub, two, div, minus,//dup,dot,cr,
                                 comma)
 WORD(do,      do_,       enter, //lit, 'D', emit,
@@ -337,45 +338,45 @@ WORD(do,      do_,       enter, //lit, 'D', emit,
                                 here, doadr, push)
 WORD(loop,    loop,      enter, //lit, 'O', emit,
                                 twofrcom,
-                                lit, oneplus, comma, 
-                                lit, twodup, comma, lit, eq, comma,
-                                lit, onbranch, comma, lit, 4, comma,
+                                compile, oneplus,
+                                compile, twodup, compile, eq,
+                                compile, onbranch, compile, 4,
                                 twotrcom,
                                 lit, branch, comma, dobrch, twodrcom)
 WORD(+loop,   plusloop,  enter, //lit, '+', emit,
                                 twofrcom,
-                                lit, rot, comma, lit, add, comma,
-                                lit, twodup, comma, lit, more, comma,
-                                lit, zbranch, comma, lit, 4, comma,
+                                compile, rot, compile, add,
+                                compile, twodup, compile, more,
+                                compile, zbranch, compile, 4,
                                 twotrcom,
-                                lit, branch, comma, dobrch, twodrcom)
+                                compile, branch, dobrch, twodrcom)
 WORD(leave,   leave,     enter, //lit, 'X', emit,
                                 twofrcom,
-                                lit, drop, comma, lit, dup, comma, lit, oneminus, comma,
+                                compile, drop, compile, dup, compile, oneminus,
                                 twotrcom)
 WORD(i,       i_,        enter, //lit, 'i', emit,
                                 twofrcom,
-                                lit, dup, comma, lit, nrot, comma,
+                                compile, dup, compile, nrot,
                                 twotrcom)
 
 WORD(."",     dotquote,  enter, lit, '"', word,
                                 swap, oneplus, swap, oneminus, 
                                 state, at, onbranch, 2,
                                   type, c_exit,
-                                lit, branch, comma,
+                                compile, branch,
                                 dup, dup, one, and, sub, dup, two, div, comma,
                                 here, swap, allot,
                                 over, to_r, dup, to_r,
                                 swap, cmove,
-                                lit, lit, comma, from_r, comma,
-                                lit, lit, comma, from_r, comma,
-                                lit, type, comma)
+                                compile, lit, from_r, comma,
+                                compile, lit, from_r, comma,
+                                compile, type)
 ((struct word_entry *)(start+link))->name_len = 2;
 WORD((),  lparen,    enter, lit, ')', word, twodrop)
 ((struct word_entry *)(start+link))->name_len = 1;
 
 WORD(;,       semi,      enter, //lit, ';', emit,
-                                lit, c_exit, comma, //latest, dot, twodup, dot, dot,
+                                compile, c_exit, //latest, dot, twodup, dot, dot,
                                 lbracket)
 flags=0;
 
@@ -396,19 +397,26 @@ WORD(variable,variable,  enter, create,
 WORD(isimmed, isimmed,   enter, lit, (S)((I)offsetof(struct word_entry,flags) -
                                      offsetof(struct word_entry,code)), add, at,
                                 lit, immediate, and)
+     /*
 WORD(compile, compile,   enter, //lit, 'C', emit, space,
                                 //threedup, dot, dot, dot,
                                 dup, isimmed, onbranch, 3, 
                                   comma, branch, 1,
                                   execute)
+				  */
 WORD(complit, complit,   enter, //lit, 'L', emit, space,
                                 //threedup, dot, dot, dot,
-                                lit, lit, comma, comma)
+                                compile, lit, comma)
                                 //swap, dup, lit, lit, swap, bang,
                                 //twoplus, swap, over, bang,
                                 //twoplus)
+     /*
 WORD(execomp, execomp,   enter, state, at, zbranch, 3, 
                                   compile, branch, 1,
+                                  execute)
+				  */
+WORD(execomp, execomp,   enter, state, at, zeq, over, isimmed, or, onbranch, 2,
+                                  comma, c_exit,
                                   execute)
 
 WORD(literal, literal,   enter, state, at, zbranch, 1,
