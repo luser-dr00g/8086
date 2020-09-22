@@ -44,6 +44,7 @@
 #undef ADDAX
 #undef LODS
 #undef CMPS
+#undef MOVS
 #undef LAHF
 #undef NOT
 #undef NEG

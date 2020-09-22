@@ -57,6 +57,7 @@
 #define ADDAX     0x05
 #define LODS      0xad
 #define CMPS      0xa7
+#define MOVS      0xa5
 #define JZ        0x74
 #define JNZ       0x75
 #define JS        0x78
