@@ -70,6 +70,7 @@
 #define sJMP      0xEB
 #define LAHF      0x9f
 #define HALT      0xF4
+#define CWD       0x99
 #define CLD       0xfc
 #define STD       0xfd
 #define INT(no)   0xCD,0x##no

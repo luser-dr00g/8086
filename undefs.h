@@ -51,6 +51,7 @@
 #undef JZ
 #undef JMP
 #undef sJMP
+#undef CWD
 #undef CLD
 #undef STD
 #undef HALT

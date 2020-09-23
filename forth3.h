@@ -76,14 +76,15 @@ WORD(<>,     ne,     enter, eq, not)
 CODE(1+,     oneplus,  MOV(,R,BX,SP), INC_(B,BX_),0)
 CODE(2+,     twoplus,  MOV(,R,BX,SP), INC_(B,BX_),0, INC_(B,BX_),0)
 CODE(1-,     oneminus, MOV(,R,BX,SP), DEC_(B,BX_),0)
-CODE(2-,     twominus, MOV(,R,BX,SP), DEC_(B,BX_),0)
+CODE(2-,     twominus, MOV(,R,BX,SP), DEC_(B,BX_),0, DEC_(B,BX_),0)
 CODE(+,      add,      POP(AX), POP(BX), ADD(,R,AX,BX), PUSH(AX))
 CODE(-,      sub,      POP(AX), MOV(,R,BX,SP), SUB(F,B,AX,BX_),0)
 CODE(*,      mul,      POP(AX), POP(BX), IMUL(R,BX), PUSH(AX))
-CODE(/,      div,      POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(AX))
-CODE(mod,    mod,      POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(DX))
-CODE(/mod,   divmod,   POP(BX), XOR(,R,DX,DX), POP(AX), IDIV(R,BX), PUSH(DX), PUSH(AX))
-CODE(u/mod,  udivmod,  POP(BX), XOR(,R,DX,DX), POP(AX), DIV(R,BX), PUSH(DX), PUSH(AX))
+CODE(/,      div,      //INT(15),
+                       POP(BX), POP(AX), CWD, IDIV(R,BX), PUSH(AX))//, INT(15))
+CODE(mod,    mod,      POP(BX), POP(AX), CWD, IDIV(R,BX), PUSH(DX))
+CODE(/mod,   divmod,   POP(BX), POP(AX), CWD, IDIV(R,BX), PUSH(DX), PUSH(AX))
+CODE(u/mod,  udivmod,  POP(BX), POP(AX), CWD, DIV(R,BX), PUSH(DX), PUSH(AX))
 CODE(*/mod,  muldivmod,POP(CX),POP(BX),POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(DX), PUSH(AX))
 CODE(*/,     muldiv,   POP(CX), POP(BX), POP(AX), IMUL(R,BX), IDIV(R,CX), PUSH(AX))
 
@@ -145,7 +146,9 @@ WORD(octal,   octal,     enter, lit, 8, base, bang)
 WORD(cr,      cr,        enter, lit,'\n', emit)
 WORD(space,   space,     enter, lit,' ', emit)
 
-WORD(.sign,   dotsign,   enter, dup, zless, zbranch, 4, lit, '-', emit, minus)
+CODE(trac,    trac,      INT(15))
+WORD(.sign,   dotsign,   enter, //trac, 
+                                dup, zless, zbranch, 4, lit, '-', emit, minus)//, trac)
 WORD(.emit,   dotemit,   enter, dup,  ten, less, zbranch, 5,
                                   lit, '0', add, branch, 3,
                                   lit, 'A'-10, add,
@@ -168,6 +171,7 @@ WORD(allot,   allot,     enter, dp, plusbang)
 WORD(nfan,    nfan,      enter, dup, lit, offsetof( struct code_entry, name_len ), add, at,
                                 swap, lit, offsetof( struct code_entry, name ), add, swap)
 WORD(cfa,     cfa,       enter, lit, offsetof( struct code_entry, code ), add)
+WORD(lfa,     lfa,       enter, lit, offsetof( struct code_entry, code ), sub)
 WORD(words,   words,     enter, zero, latest,
                                   swap, //dup, udot,       //(1/3)
                                   oneplus, swap,           //(2)
@@ -274,40 +278,60 @@ WORD(create,  create,    enter, here,
                                 lit, sizeof(struct word_entry), allot,
                                 banglink)
 
-WORD(bradr,   bradr,     dovar, 0)
-p += 40;
-WORD(doadr,   doadr,     dovar, 0)
-p += 40;
-WORD(beadr,   beadr,     dovar, 0)
-p += 40;
-WORD(whadr,   whadr,     dovar, 0)
-p += 40;
-
 #define COMMA ,
 WORD(COMMA,   comma,     enter, //dup, dot, 
                                 here, bang, two, allot)
 WORD(compile, compile,   enter, from_r, dup, twoplus, to_r, at, comma)
-WORD(],       rbracket,  enter, true, state, bang)
+WORD(],       rbracket,  enter, true, state, bang) //start compiling
+
+//WORD((do),    _do_,      enter, to_r, to_r)
+CODE((do),    _do_,      POP(AX), PUSHRSP(AX), POP(AX), PUSHRSP(AX))
+//WORD(i,       i,         enter, r)
+CODE(i,       i,         MOV(,B,AX,BP_),4, PUSH(AX))
+//WORD(leave,   leave,     enter, from_r, drop, r, to_r)
+CODE(leave,   leave,     MOV(,B,AX,BP_),4, MOV(F,B,AX,BP_),0)
+
+CODE((loop),  _loop_,    //INT(15),
+                         INC_(B,BP_),4,     // inc loop count on return stack
+                         MOV(,B,AX,BP_),4,  // load loop count
+                         CMP(,B,AX,BP_),0, JGE, 7,  // jump LOOP1 if count >= limit
+                         //ADD(,Z,SI,SI_), sJMP, 3, // add backward branch offset. jump END
+                           LODS, SHL(R,AX), ADD(,R,SI,AX), sJMP, 4,
+                           LODS, LEA(,B,BP,BP_),8)  // LOOP1: discard params from ret stack
+                         //INC_(R,SI), INC_(R,SI),
+                         //INT(15)) // END: advance ip
+
+CODE((+loop), _plusloop_,POP(AX), ADD(F,B,AX,BP_),0,
+                         OR(,R,AX,AX), JL, 35,
+                           MOV(,B,BX,BP_),0, CMP(,B,BX,BP_),2, JGE, 13,  //(8)
+                           ADD(,Z,SI,SI_), INC_(R,SI), INC_(R,SI),       //(6)
+                           NEXT,                                         //(7) //LOOP2:
+                           LEA(,B,BP,BP_),4, INC_(R,SI), INC_(R,SI),     //(7)
+                           NEXT,                                         //(7) //LOOP3:
+                           MOV(,B,BX,BP_),0, CMP(,B,BX,BP_),2, JLE, -22, //(8)
+                         ADD(,Z,SI,SI_), INC_(R,SI), INC_(R,SI))
 
 flags=immediate;
-WORD([,       lbracket,  enter, zero, state, bang)
+WORD([,       lbracket,  enter, zero, state, bang) //stop compiling, start executing
+
+WORD(if,      if_,       enter, compile, zbranch, here, zero, comma,
+                                two)
+WORD(endif,   endif,     enter, //twodup, dot, dot,
+                                two, eq, onbranch, 1, error,
+                                here, over, twoplus, sub, two, div, swap, bang)
+WORD(else,    else_,     enter, two, eq, onbranch, 1, error,
+                                compile, branch, here, zero, comma,
+                                swap, here, over, twoplus, sub, two, div, swap, bang,
+                                two)
+WORD(then,    then,      enter, endif)
+
+     /*
+WORD(bradr,   bradr,     dovar, 0)
+p += 40;
 WORD(brsave,  brsave,    enter, here, bradr, push)
 WORD(brpatch, brpatch,   enter, //here,
                                 bradr, peek, sub, two, div, //dup, dot, cr,
                                   bradr, pop, bang)
-WORD(if,      if_,       enter, compile, zbranch,
-                                here, zero, comma,
-                                two)
-WORD(endif,   endif,     enter, two, eq, onbranch, 1, error,
-                                here, over, twoplus, sub, two, div, swap, bang)
-WORD(then,    then,      enter, endif)
-WORD(else,    else_,     enter, two, eq, onbranch, 1, error,
-                                compile, branch,
-                                here, zero, comma,
-                                swap, here, over,  // h if h' if
-                                twoplus, sub, two, div, swap, bang, // h h'-if/2!if
-                                two)
-     /*
 WORD(if,      if_,       enter, //lit, 'I', emit, 
                                 compile, zbranch,
                                 brsave, zero, comma)
@@ -320,6 +344,29 @@ WORD(then,    then,      enter, //lit, 'T', emit,
 WORD(endif,   endif,     enter, then)
 */
 
+WORD(begin,   begin,     enter, here, one)
+WORD(back,    back,      enter, here, twoplus, sub, two, div, comma)
+WORD(until,   until,     enter, one, eq, onbranch, 1, error,
+                                compile, zbranch,
+                                back)
+WORD(again,   again,     enter, one, eq, onbranch, 1, error,
+                                compile, branch,
+                                back)
+WORD(while,   while_,    enter, if_, twoplus)
+WORD(repeat,  repeat,    enter, //twodup, dot, dot,
+                                dup, four, eq, onbranch, 2,
+                                  again, c_exit,
+                                twoswap, //to_r, to_r, 
+                                //twodup, dot, dot,
+                                again, //from_r, from_r,
+                                //twodup, dot, dot,
+                                twominus, endif)
+
+     /*
+WORD(beadr,   beadr,     dovar, 0)
+p += 40;
+WORD(whadr,   whadr,     dovar, 0)
+p += 40;
 WORD(besave,  besave,    enter, here, beadr, push)
 WORD(whsave,  whsave,    enter, here, whadr, push)
 WORD(bepatch, bepatch,   enter, beadr, peek, sub, two, div,
@@ -341,7 +388,23 @@ WORD(repeat,  repeat,    enter, lit, 'R', emit, dup, //dot, cr,
                                 here, bebrch,
                                 whadr, twoplus, at, zbranch, 2,
                                   here, whpatch)
+				  */
 
+WORD(do,      do_,       enter, compile, _do_,
+                                here, //dup, dot,
+                                three)
+WORD(loop,    loop,      enter, //dup, dot,
+                                three, eq, onbranch, 1, error,
+                                compile, _loop_,
+                                //dup, dot,
+                                back)
+WORD(+loop,   plusloop,  enter, three, eq, onbranch, 1, error,
+                                compile, _plusloop_,
+                                back)
+
+/*
+WORD(doadr,   doadr,     dovar, 0)
+p += 40;
 WORD(2trcom,  twotrcom,  enter, compile, to_r, compile, to_r)
 WORD(2frcom,  twofrcom,  enter, compile, from_r, compile, from_r)
 WORD(2drcom,  twodrcom,  enter, twofrcom, compile, twodrop)
@@ -372,6 +435,7 @@ WORD(i,       i_,        enter, //lit, 'i', emit,
                                 twofrcom,
                                 compile, dup, compile, nrot,
                                 twotrcom)
+				*/
 
 WORD(."",     dotquote,  enter, lit, '"', word,
                                 swap, oneplus, swap, oneminus, 
@@ -391,12 +455,13 @@ WORD((),  lparen,    enter, lit, ')', word, twodrop)
 
 WORD(;,       semi,      enter, //lit, ';', emit,
                                 compile, c_exit, //latest, dot, twodup, dot, dot,
+                                latest, zero, bangflags, drop,
                                 lbracket)
 flags=0;
 
 WORD(:,       colon,     enter, //lit, ':', emit,
                                 create, 
-                                lit, smudged, bangflags, bangname, bangcolon, dup, linkbang, 
+                                lit, smudged, bangflags, bangname, bangcolon, linkbang, 
                                 //dup, //param,
                                 rbracket)//, twodup, udot, udot)
 WORD(constant,constant,  enter, create, 

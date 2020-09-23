@@ -224,7 +224,7 @@ U decseg(U sr){         // decode segment register
 #define NOP (void)0;
 #define AXCH(r) x=(U)ax; y=(U)(r); w=1; XCHG
 #define CBW *ax=(S)(C)*al;
-#define CWD z=(I)(S)*ax; *dx=z>>16;
+#define CWD z=(I)(S)*ax; *dx=-(z>>15);
 #define CALL x=w?fetchw():(S)(C)fetchb(); PUSH(ip); (*ip)+=(S)x;
 #define FARCALL PUSH(cs); PUSH(ip);
 #define WAIT
