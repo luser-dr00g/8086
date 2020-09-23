@@ -267,8 +267,7 @@ WORD(create,  create,    enter, here,
                                 banglink)
 
 #define COMMA ,
-WORD(COMMA,   comma,     enter, //dup, dot, 
-                                here, bang, two, allot)
+WORD(COMMA,   comma,     enter, here, bang, two, allot)
 WORD(compile, compile,   enter, from_r, dup, twoplus, to_r, at, comma)
 WORD(],       rbracket,  enter, true, state, bang) //start compiling
 
@@ -302,8 +301,7 @@ WORD([,       lbracket,  enter, zero, state, bang) //stop compiling, start execu
 
 WORD(if,      if_,       enter, compile, zbranch, here, zero, comma,
                                 two)
-WORD(endif,   endif,     enter, //twodup, dot, dot,
-                                two, eq, onbranch, 1, error,
+WORD(endif,   endif,     enter, two, eq, onbranch, 1, error,
                                 here, over, twoplus, sub, two, div, swap, bang)
 WORD(else,    else_,     enter, two, eq, onbranch, 1, error,
                                 compile, branch, here, zero, comma,
@@ -311,37 +309,23 @@ WORD(else,    else_,     enter, two, eq, onbranch, 1, error,
                                 two)
 WORD(then,    then,      enter, endif)
 
-WORD(begin,   begin,     enter, here, one)
+WORD(begin,   begin,     enter, here,
+                                one)
 WORD(back,    back,      enter, here, twoplus, sub, two, div, comma)
 WORD(until,   until,     enter, one, eq, onbranch, 1, error,
-                                compile, zbranch,
-                                back)
+                                compile, zbranch, back)
 WORD(again,   again,     enter, one, eq, onbranch, 1, error,
-                                compile, branch,
-                                back)
-WORD(while,   while_,    enter, if_, //twoplus, 
-                                twoswap)
-WORD(repeat,  repeat,    enter, //twodup, dot, dot,
-                                //dup, four, eq, onbranch, 2,
-                                  //again, c_exit,
-                                //twoswap, //to_r, to_r, 
-                                //twodup, dot, dot,
-                                again, //from_r, from_r,
-                                //twodup, dot, dot,
-                                //twominus, 
-                                endif)
+                                compile, branch, back)
+WORD(while,   while_,    enter, if_, twoswap)
+WORD(repeat,  repeat,    enter, again, endif)
 
 WORD(do,      do_,       enter, compile, _do_,
-                                here, //dup, dot,
+                                here, 
                                 three)
-WORD(loop,    loop,      enter, //dup, dot,
-                                three, eq, onbranch, 1, error,
-                                compile, _loop_,
-                                //dup, dot,
-                                back)
+WORD(loop,    loop,      enter, three, eq, onbranch, 1, error,
+                                compile, _loop_, back)
 WORD(+loop,   plusloop,  enter, three, eq, onbranch, 1, error,
-                                compile, _plusloop_,
-                                back)
+                                compile, _plusloop_, back)
 
 WORD(."",     dotquote,  enter, lit, '"', word,
                                 swap, oneplus, swap, oneminus, 
@@ -383,12 +367,8 @@ WORD(isimmed, isimmed,   enter, lit, (S)((I)offsetof(struct word_entry,flags) -
                                      offsetof(struct word_entry,code)), add, at,
                                 lit, immediate, and)
 
-WORD(complit, complit,   enter, //lit, 'L', emit, space,
-                                //threedup, dot, dot, dot,
-                                compile, lit, comma)
-                                //swap, dup, lit, lit, swap, bang,
-                                //twoplus, swap, over, bang,
-                                //twoplus)
+WORD(complit, complit,   enter, //lit, 'L', emit, space, //threedup, dot, dot, dot,
+                                compile, lit, comma) 
 
 WORD(execomp, execomp,   enter, state, at, zeq, over, isimmed, or, onbranch, 2,
                                   comma, c_exit,
