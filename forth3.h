@@ -294,7 +294,7 @@ WORD(COMMA,   comma,     enter, here, bang, two, allot)
 WORD(compile, compile,   enter, from_r, dup, twoplus, to_r, at, comma)
 WORD(],       rbracket,  enter, true, state, bang) //start compiling
 
-flags=immediate;
+flags=immediate; // IMMEDIATE WORDS
 WORD([,       lbracket,  enter, zero, state, bang) //stop compiling, start executing
 
 WORD(if,      if_,       enter, compile, zbranch, here, zero, comma,
@@ -345,20 +345,17 @@ WORD(;,       semi,      enter, //lit, ';', emit,
                                 compile, c_exit, //latest, dot, twodup, dot, dot,
                                 latest, zero, bangflags, drop,
                                 lbracket)
-flags=0;
+flags=0; // Back to REGULAR WORDS
 
 WORD(:,       colon,     enter, //lit, ':', emit,
                                 create, 
                                 lit, smudged, bangflags, bangname, bangcolon, linkbang, 
-                                //dup, //param,
                                 rbracket)//, twodup, udot, udot)
 WORD(constant,constant,  enter, create, 
                                 zero, bangflags, bangname, bangcon, dup, linkbang,
-                                //dup, //param, rot, swap, bang, 
                                 swap, comma)
 WORD(variable,variable,  enter, create,
                                 zero, bangflags, bangname, bangvar, dup, linkbang,
-                                //dup, //param, rot, swap, bang,
                                 swap, comma)
 
 WORD(isimmed, isimmed,   enter, lit, (S)((I)offsetof(struct word_entry,flags) -

@@ -71,8 +71,8 @@ void interrupt( UC no ){
   CASE 0x15: trace = trace  ? 0  : 1;
   CASE 0x21: switch(bget(ah)){
              CASE 0x01: bput(al, getchar());
-             CASE 0x02: //fputs( cp437tounicode( bget(dl) ), stdout );
-                        putchar(bget(dl)); fflush(stdout);
+             CASE 0x02: fputs( cp437tounicode( bget(dl) ), stdout );
+                        //putchar(bget(dl)); fflush(stdout);
                         bput(al,bget(dl)); if(bget(al)=='\t')bput(al,' ');
 	     CASE 0x09: f=wget(dx); while(mem[f]!='$')putchar(mem[f++]); bput(al,'$');
 	     CASE 0x2A: {time_t t=time(NULL);struct tm*tm=localtime(&t);
