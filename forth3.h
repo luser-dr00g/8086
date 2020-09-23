@@ -120,6 +120,31 @@ CODE(cmove,   cmove,   //INT(15),
                          BYTE+MOVS, DEC_(R,CX), JNZ, -5, //(5)
                        POP(SI))//, INT(15)
 
+CODE((do),    _do_,      POP(AX), PUSHRSP(AX), POP(AX), PUSHRSP(AX))
+CODE(i,       i,         MOV(,B,AX,BP_),4, PUSH(AX))
+CODE(leave,   leave,     MOV(,B,AX,BP_),4, MOV(F,B,AX,BP_),0)
+CODE((loop),  _loop_,    //INT(15),
+                         INC_(B,BP_),4,     // inc loop count on return stack
+                         MOV(,B,AX,BP_),4,  // load loop count
+                         CMP(,B,AX,BP_),0, JGE, 7,  // jump LOOP1 if count >= limit
+                                                    // add backward branch offset. jump END
+                           LODS, SHL(R,AX), ADD(,R,SI,AX), sJMP, 4,
+                           LODS, LEA(,B,BP,BP_),8)  // LOOP1: discard params from ret stack
+                         //INT(15)) // END: advance ip
+CODE((+loop), _plusloop_,//INT(15),
+                         POP(AX), ADD(F,B,AX,BP_),4,               // add arg to loop count
+                         OR(,R,AX,AX), JL, 31,                           // jump :3 if arg<0
+                           MOV(,B,BX,BP_),4, CMP(,B,BX,BP_),0, JGE, 12,  //(8) jmp :2 if lim
+                           LODS, SHL(R,AX), ADD(,R,SI,AX),               //(5) branch NEXT
+                           NEXT,                                         //(7) 2:
+                           LODS, LEA(,B,BP,BP_),8,                       //(4) done NEXT
+                           NEXT,                                         //(7) 3:
+                           MOV(,B,BX,BP_),4, CMP(,B,BX,BP_),0, JLE, -19, //(8) jmp :2 if lim
+                         LODS, SHL(R,AX), ADD(,R,SI,AX))                 // branch NEXT
+                         //INT(15))
+CODE(bye,     bye,       HALT)
+CODE(trac,    trac,      INT(15))
+
 WORD(true,    true,      docon, -1)
 WORD(0,       zero,      docon, 0)
 WORD(1,       one,       docon, 1)
@@ -135,7 +160,6 @@ WORD(octal,   octal,     enter, lit, 8, base, bang)
 WORD(cr,      cr,        enter, lit,'\n', emit)
 WORD(space,   space,     enter, lit,' ', emit)
 
-CODE(trac,    trac,      INT(15))
 WORD(.sign,   dotsign,   enter, //trac, 
                                 dup, zless, zbranch, 4, lit, '-', emit, minus)//, trac)
 WORD(.emit,   dotemit,   enter, dup,  ten, less, zbranch, 5,
@@ -228,7 +252,6 @@ WORD(parse,   parse,     enter, //twodup, type, space,
                                 buffer, dup, zmore, zbranch, 3, 
                                 twodrop, lit, ' ', word)
 
-CODE(bye,     bye,       HALT)
 WORD(errout,  errout,    enter, bye) //patched to quit later
 WORD(error,   error,     enter, lit, 'E', emit, lit, 'R', emit, lit, 'R', emit,
                                 dot, dot, dot, cr,
@@ -270,31 +293,6 @@ WORD(create,  create,    enter, here,
 WORD(COMMA,   comma,     enter, here, bang, two, allot)
 WORD(compile, compile,   enter, from_r, dup, twoplus, to_r, at, comma)
 WORD(],       rbracket,  enter, true, state, bang) //start compiling
-
-CODE((do),    _do_,      POP(AX), PUSHRSP(AX), POP(AX), PUSHRSP(AX))
-CODE(i,       i,         MOV(,B,AX,BP_),4, PUSH(AX))
-CODE(leave,   leave,     MOV(,B,AX,BP_),4, MOV(F,B,AX,BP_),0)
-
-CODE((loop),  _loop_,    //INT(15),
-                         INC_(B,BP_),4,     // inc loop count on return stack
-                         MOV(,B,AX,BP_),4,  // load loop count
-                         CMP(,B,AX,BP_),0, JGE, 7,  // jump LOOP1 if count >= limit
-                                                    // add backward branch offset. jump END
-                           LODS, SHL(R,AX), ADD(,R,SI,AX), sJMP, 4,
-                           LODS, LEA(,B,BP,BP_),8)  // LOOP1: discard params from ret stack
-                         //INT(15)) // END: advance ip
-
-CODE((+loop), _plusloop_,//INT(15),
-                         POP(AX), ADD(F,B,AX,BP_),4,               // add arg to loop count
-                         OR(,R,AX,AX), JL, 31,                           // jump :3 if arg<0
-                           MOV(,B,BX,BP_),4, CMP(,B,BX,BP_),0, JGE, 12,  //(8) jmp :2 if lim
-                           LODS, SHL(R,AX), ADD(,R,SI,AX),               //(5) branch NEXT
-                           NEXT,                                         //(7) 2:
-                           LODS, LEA(,B,BP,BP_),8,                       //(4) done NEXT
-                           NEXT,                                         //(7) 3:
-                           MOV(,B,BX,BP_),4, CMP(,B,BX,BP_),0, JLE, -19, //(8) jmp :2 if lim
-                         LODS, SHL(R,AX), ADD(,R,SI,AX))                 // branch NEXT
-                         //INT(15))
 
 flags=immediate;
 WORD([,       lbracket,  enter, zero, state, bang) //stop compiling, start executing
