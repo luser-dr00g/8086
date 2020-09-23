@@ -319,15 +319,17 @@ WORD(until,   until,     enter, one, eq, onbranch, 1, error,
 WORD(again,   again,     enter, one, eq, onbranch, 1, error,
                                 compile, branch,
                                 back)
-WORD(while,   while_,    enter, if_, twoplus)
+WORD(while,   while_,    enter, if_, //twoplus, 
+                                twoswap)
 WORD(repeat,  repeat,    enter, //twodup, dot, dot,
-                                dup, four, eq, onbranch, 2,
-                                  again, c_exit,
-                                twoswap, //to_r, to_r, 
+                                //dup, four, eq, onbranch, 2,
+                                  //again, c_exit,
+                                //twoswap, //to_r, to_r, 
                                 //twodup, dot, dot,
                                 again, //from_r, from_r,
                                 //twodup, dot, dot,
-                                twominus, endif)
+                                //twominus, 
+                                endif)
 
 WORD(do,      do_,       enter, compile, _do_,
                                 here, //dup, dot,
