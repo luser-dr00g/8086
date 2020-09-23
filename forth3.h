@@ -280,21 +280,22 @@ CODE((loop),  _loop_,    //INT(15),
                          INC_(B,BP_),4,     // inc loop count on return stack
                          MOV(,B,AX,BP_),4,  // load loop count
                          CMP(,B,AX,BP_),0, JGE, 7,  // jump LOOP1 if count >= limit
-                         //ADD(,Z,SI,SI_), sJMP, 3, // add backward branch offset. jump END
+                                                    // add backward branch offset. jump END
                            LODS, SHL(R,AX), ADD(,R,SI,AX), sJMP, 4,
                            LODS, LEA(,B,BP,BP_),8)  // LOOP1: discard params from ret stack
-                         //INC_(R,SI), INC_(R,SI),
                          //INT(15)) // END: advance ip
 
-CODE((+loop), _plusloop_,POP(AX), ADD(F,B,AX,BP_),0,
-                         OR(,R,AX,AX), JL, 35,
-                           MOV(,B,BX,BP_),0, CMP(,B,BX,BP_),2, JGE, 13,  //(8)
-                           ADD(,Z,SI,SI_), INC_(R,SI), INC_(R,SI),       //(6)
-                           NEXT,                                         //(7) //LOOP2:
-                           LEA(,B,BP,BP_),4, INC_(R,SI), INC_(R,SI),     //(7)
-                           NEXT,                                         //(7) //LOOP3:
-                           MOV(,B,BX,BP_),0, CMP(,B,BX,BP_),2, JLE, -22, //(8)
-                         ADD(,Z,SI,SI_), INC_(R,SI), INC_(R,SI))
+CODE((+loop), _plusloop_,//INT(15),
+                         POP(AX), ADD(F,B,AX,BP_),4,               // add arg to loop count
+                         OR(,R,AX,AX), JL, 31,                           // jump :3 if arg<0
+                           MOV(,B,BX,BP_),4, CMP(,B,BX,BP_),0, JGE, 12,  //(8) jmp :2 if lim
+                           LODS, SHL(R,AX), ADD(,R,SI,AX),               //(5) branch NEXT
+                           NEXT,                                         //(7) 2:
+                           LODS, LEA(,B,BP,BP_),8,                       //(4) done NEXT
+                           NEXT,                                         //(7) 3:
+                           MOV(,B,BX,BP_),4, CMP(,B,BX,BP_),0, JLE, -19, //(8) jmp :2 if lim
+                         LODS, SHL(R,AX), ADD(,R,SI,AX))                 // branch NEXT
+                         //INT(15))
 
 flags=immediate;
 WORD([,       lbracket,  enter, zero, state, bang) //stop compiling, start executing
