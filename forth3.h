@@ -113,23 +113,12 @@ CODE(s=,     seq,      POP(CX), POP(DX), POP(BX), POP(AX), PUSH(SI), STD,
                          BYTE+CMPS, JNZ, -11,         //(3)
                          DEC_(R,CX), JNZ, -7,         //(4)
                        POP(SI), PUSH(BX))
-//*
 CODE(cmove,   cmove,   //INT(15), 
                        POP(CX), POP(DX), POP(AX), PUSH(SI), CLD,
                        OR(,R,CX,CX), JZ, 9,
                          MOV(,R,SI,AX), MOV(,R,DI,DX), //(4)
                          BYTE+MOVS, DEC_(R,CX), JNZ, -5, //(5)
-                       POP(SI)//, INT(15)
-                       )/**/
-/*
-WORD(cmove,   cmove,     enter, // a1 a2 n
-                                swap, rot, // n a2 a1
-                                  twopick, zeq, onbranch, 12, //(4)
-                                  twodup, cat, swap, cbang, //(4)  // n a2 a1  (a2!a1@)
-                                  rot, oneminus, rot, oneplus, rot, oneplus,//(6) n- a2+ a1+
-                                  branch, -16, //(2)
-                                drop, drop, drop)
-				/**/
+                       POP(SI))//, INT(15)
 
 WORD(true,    true,      docon, -1)
 WORD(0,       zero,      docon, 0)
@@ -272,7 +261,6 @@ WORD(!code,   bangcode,  enter, over, lit, offsetof(struct word_entry,code), add
 WORD(!colon,  bangcolon, enter, lit, enter, bangcode)
 WORD(!con,    bangcon,   enter, lit, docon, bangcode)
 WORD(!var,    bangvar,   enter, lit, dovar, bangcode)
-//WORD(param,   param,     enter, lit, offsetof(struct word_entry,code)+sizeof(US), add)
 WORD(link!,   linkbang,  enter, lit, latest+2, bang) 
 WORD(create,  create,    enter, here, 
                                 lit, sizeof(struct word_entry), allot,
@@ -284,11 +272,8 @@ WORD(COMMA,   comma,     enter, //dup, dot,
 WORD(compile, compile,   enter, from_r, dup, twoplus, to_r, at, comma)
 WORD(],       rbracket,  enter, true, state, bang) //start compiling
 
-//WORD((do),    _do_,      enter, to_r, to_r)
 CODE((do),    _do_,      POP(AX), PUSHRSP(AX), POP(AX), PUSHRSP(AX))
-//WORD(i,       i,         enter, r)
 CODE(i,       i,         MOV(,B,AX,BP_),4, PUSH(AX))
-//WORD(leave,   leave,     enter, from_r, drop, r, to_r)
 CODE(leave,   leave,     MOV(,B,AX,BP_),4, MOV(F,B,AX,BP_),0)
 
 CODE((loop),  _loop_,    //INT(15),
@@ -325,25 +310,6 @@ WORD(else,    else_,     enter, two, eq, onbranch, 1, error,
                                 two)
 WORD(then,    then,      enter, endif)
 
-     /*
-WORD(bradr,   bradr,     dovar, 0)
-p += 40;
-WORD(brsave,  brsave,    enter, here, bradr, push)
-WORD(brpatch, brpatch,   enter, //here,
-                                bradr, peek, sub, two, div, //dup, dot, cr,
-                                  bradr, pop, bang)
-WORD(if,      if_,       enter, //lit, 'I', emit, 
-                                compile, zbranch,
-                                brsave, zero, comma)
-WORD(else,    else_,     enter, //lit, 'E', emit,
-                                compile, branch,
-                                here, brpatch,
-                                brsave, zero, comma)
-WORD(then,    then,      enter, //lit, 'T', emit,
-                                here, twominus, brpatch)
-WORD(endif,   endif,     enter, then)
-*/
-
 WORD(begin,   begin,     enter, here, one)
 WORD(back,    back,      enter, here, twoplus, sub, two, div, comma)
 WORD(until,   until,     enter, one, eq, onbranch, 1, error,
@@ -362,34 +328,6 @@ WORD(repeat,  repeat,    enter, //twodup, dot, dot,
                                 //twodup, dot, dot,
                                 twominus, endif)
 
-     /*
-WORD(beadr,   beadr,     dovar, 0)
-p += 40;
-WORD(whadr,   whadr,     dovar, 0)
-p += 40;
-WORD(besave,  besave,    enter, here, beadr, push)
-WORD(whsave,  whsave,    enter, here, whadr, push)
-WORD(bepatch, bepatch,   enter, beadr, peek, sub, two, div,
-                                  beadr, pop, bang)
-WORD(whpatch, whpatch,   enter, whadr, peek, sub, twominus, two, div,
-                                  whadr, pop, bang)
-WORD(bebrch,  bebrch,    enter, twoplus, beadr, pop, sub, two, div, minus,//dup,dot,cr,
-                                comma)
-WORD(begin,   begin,     enter, lit, 'B', emit, dup, //dot, cr,
-                                besave)
-WORD(until,   until,     enter, lit, 'U', emit, dup, //dot, cr,
-                                compile, zbranch, 
-                                here, bebrch)
-WORD(while,   while_,    enter, lit, 'W', emit, dup, //dot, cr,
-                                compile, zbranch, 
-                                whsave, zero, comma)
-WORD(repeat,  repeat,    enter, lit, 'R', emit, dup, //dot, cr,
-                                compile, branch,
-                                here, bebrch,
-                                whadr, twoplus, at, zbranch, 2,
-                                  here, whpatch)
-				  */
-
 WORD(do,      do_,       enter, compile, _do_,
                                 here, //dup, dot,
                                 three)
@@ -401,41 +339,6 @@ WORD(loop,    loop,      enter, //dup, dot,
 WORD(+loop,   plusloop,  enter, three, eq, onbranch, 1, error,
                                 compile, _plusloop_,
                                 back)
-
-/*
-WORD(doadr,   doadr,     dovar, 0)
-p += 40;
-WORD(2trcom,  twotrcom,  enter, compile, to_r, compile, to_r)
-WORD(2frcom,  twofrcom,  enter, compile, from_r, compile, from_r)
-WORD(2drcom,  twodrcom,  enter, twofrcom, compile, twodrop)
-WORD(dobrch,  dobrch,    enter, here, twoplus, doadr, pop, sub, two, div, minus,//dup,dot,cr,
-                                comma)
-WORD(do,      do_,       enter, //lit, 'D', emit,
-                                twotrcom,
-                                here, doadr, push)
-WORD(loop,    loop,      enter, //lit, 'O', emit,
-                                twofrcom,
-                                compile, oneplus,
-                                compile, twodup, compile, eq,
-                                compile, onbranch, compile, 4,
-                                twotrcom,
-                                lit, branch, comma, dobrch, twodrcom)
-WORD(+loop,   plusloop,  enter, //lit, '+', emit,
-                                twofrcom,
-                                compile, rot, compile, add,
-                                compile, twodup, compile, more,
-                                compile, zbranch, compile, 4,
-                                twotrcom,
-                                compile, branch, dobrch, twodrcom)
-WORD(leave,   leave,     enter, //lit, 'X', emit,
-                                twofrcom,
-                                compile, drop, compile, dup, compile, oneminus,
-                                twotrcom)
-WORD(i,       i_,        enter, //lit, 'i', emit,
-                                twofrcom,
-                                compile, dup, compile, nrot,
-                                twotrcom)
-				*/
 
 WORD(."",     dotquote,  enter, lit, '"', word,
                                 swap, oneplus, swap, oneminus, 
@@ -476,24 +379,14 @@ WORD(variable,variable,  enter, create,
 WORD(isimmed, isimmed,   enter, lit, (S)((I)offsetof(struct word_entry,flags) -
                                      offsetof(struct word_entry,code)), add, at,
                                 lit, immediate, and)
-     /*
-WORD(compile, compile,   enter, //lit, 'C', emit, space,
-                                //threedup, dot, dot, dot,
-                                dup, isimmed, onbranch, 3, 
-                                  comma, branch, 1,
-                                  execute)
-				  */
+
 WORD(complit, complit,   enter, //lit, 'L', emit, space,
                                 //threedup, dot, dot, dot,
                                 compile, lit, comma)
                                 //swap, dup, lit, lit, swap, bang,
                                 //twoplus, swap, over, bang,
                                 //twoplus)
-     /*
-WORD(execomp, execomp,   enter, state, at, zbranch, 3, 
-                                  compile, branch, 1,
-                                  execute)
-				  */
+
 WORD(execomp, execomp,   enter, state, at, zeq, over, isimmed, or, onbranch, 2,
                                   comma, c_exit,
                                   execute)
