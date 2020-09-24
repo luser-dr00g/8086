@@ -5,7 +5,7 @@ enum { MAX_NAME = 9, MAX_CODE_PARAM = 40, MAX_WORD_PARAM = 30 };
 struct code_entry {
   US link;
   US flags;
-  US name_len;
+  UC name_len;
   UC name[ MAX_NAME ];
   US code;
   //UC param[ MAX_CODE_PARAM ];
@@ -14,7 +14,7 @@ struct code_entry {
 struct headless_entry {
   US link;
   US flags;
-  US name_len;
+  UC name_len;
   UC name[ MAX_NAME ];
   //UC param[ MAX_CODE_PARAM ];
 };
@@ -22,7 +22,7 @@ struct headless_entry {
 struct word_entry {
   US link;
   US flags;
-  US name_len;
+  UC name_len;
   UC name[ MAX_NAME ];
   US code;
   //US param[ MAX_WORD_PARAM ];

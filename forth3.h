@@ -181,8 +181,11 @@ WORD(dp,      dp,        dovar, 0) // patched to end of dictionary later
 WORD(latest,  latest,    docon, 0) // patched to last dictionary entry later
 WORD(here,    here,      enter, dp, at)
 WORD(allot,   allot,     enter, dp, plusbang)
-WORD(nfan,    nfan,      enter, dup, lit, offsetof( struct code_entry, name_len ), add, at,
-                                swap, lit, offsetof( struct code_entry, name ), add, swap)
+WORD(count,   count,     enter, dup, oneplus, swap, cat)
+WORD(nfan,    nfan,      enter, //dup, 
+                                lit, offsetof( struct code_entry, name_len ), add, 
+                                count)//cat,
+                                //swap, lit, offsetof( struct code_entry, name ), add, swap)
 WORD(cfa,     cfa,       enter, lit, offsetof( struct code_entry, code ), add)
 WORD(lfa,     lfa,       enter, lit, offsetof( struct code_entry, code ), sub)
 WORD(words,   words,     enter, zero, latest,
@@ -252,10 +255,14 @@ WORD(parse,   parse,     enter, //twodup, type, space,
                                 buffer, dup, zmore, zbranch, 3, 
                                 twodrop, lit, ' ', word)
 
+WORD(warning, warning,   dovar, 0)
 WORD(errout,  errout,    enter, bye) //patched to quit later
-WORD(error,   error,     enter, lit, 'E', emit, lit, 'R', emit, lit, 'R', emit,
-                                dot, dot, dot, cr,
-                                errout)
+WORD((abort), _abort_,   enter, bye) //patched to abort later
+WORD(error,   error,     enter, warning, at, zless, zbranch, 1, _abort_,
+                                lit, 'E', emit, lit, 'R', emit, lit, 'R', emit,
+                                dot, dot, dot, cr, errout)
+WORD(?error,  qerror,    enter, swap, zbranch, 2, error, c_exit,
+                                drop)
 
 WORD(numdec,  numdec,    enter, dup, lit, 'A', less, zbranch, 5,  // a n a@
                                   lit, '0', sub, branch, 3, //(5)
@@ -277,7 +284,7 @@ WORD(!link,   banglink,  enter, latest, over, bang)
 WORD(!flags,  bangflags, enter, over, lit, offsetof(struct word_entry,flags), add, bang)
 WORD(!name,   bangname,  enter, parse, dup, // lfa a n n
                                 threepick,lit,offsetof(struct word_entry,name_len),
-                                add, bang,
+                                add, cbang,
                                 twopick, lit, offsetof(struct word_entry,name),
                                 add, swap, cmove)
 WORD(!code,   bangcode,  enter, over, lit, offsetof(struct word_entry,code), add, bang)
@@ -392,69 +399,12 @@ WORD(abort,     abort,     enter, resetrsp, lbracket, quit)
 HEADLESS(cold,  cold,      MOVSII(abort+2))
 
 memcpy( start+errout+2, (US[]){ quit }, 2 );
+memcpy( start+_abort_+2, (US[]){ abort }, 2 );
 memcpy( start+dp+2, (US[]){ p-start }, 2 );
 memcpy( start+latest+2, (US[]){ link }, 2 );
-memcpy( p, "Hello world!", 12 );
 
 nop_();
 { UC x[] = { JMPAX(cold) }; memcpy( start, x, sizeof x ); } // boot code
 if(trace){P("\n");}
 trace=0;
 return  0;}
-
-
-     /*
-WORD(e,       e,         enter, parse, type, space)
-WORD(test0,   test0,     enter, zero, dot,
-                                one, dot, ten, dot, ok)
-WORD(test1,   test1,     enter, zero, zeq, dot,
-                                one, zeq, dot, ok)
-WORD(test2,   test2,     enter, lit,12,            zless, dot,
-                                lit,1+(0xffff^50), zless, dot,
-                                lit,12,            zmore, dot,
-                                lit,1+(0xffff^50), zmore, dot, ok)
-WORD(test2a,  test2a,    enter, one, ten, less, dot,
-                                one, ten, more, dot, ok)
-WORD(test3,   test3,     enter, here, lit, 12, allot, 
-                                lit, 12, type, ok)
-
-WORD(var,     var,       dovar, 42)
-WORD(test4,   test4,     enter, var, dot, var, at, dot, ok)
-WORD(test5,   test5,     enter, ten, var, bang, var, at, dot, ok)
-WORD(test6,   test6,     enter, lit, 16, base, bang, var, dot, var, at, dot, ok)
-WORD(test7,   test7,     enter, lit, -10, udot, ok)
-WORD(test8,   test8,     enter, lit, 'w', emit, lit, 'o', emit, lit, 'r', emit,
-                                lit, 'd', emit, lit, 's', emit, cr,  words, ok)
-WORD(test9,   test9,     enter, readline, buffer, //twodup, udot, udot,
-                                type, ok)
-
-WORD(test10,  test10,    enter, readline, buffer, twodup, dup, dot, type, space,
-                                latest, nfan, twodup, dup, dot, type, space, 
-                                seq, dot, cr)
-WORD(test11,  test11,    enter, five, four, three, two, one,
-                                zero, pick, dot,
-                                one, pick, dot,
-                                two, pick, dot, 
-                                drop, drop, drop, drop, drop, ok)
-WORD(test12,  test12,    enter, readline, buffer, find, dot, dot, dot, ok)
-WORD(test13,  test13,    enter, readline, buffer, find, dup, dot,
-                                dup, zeq, onbranch, 1,
-                                  execute,
-                                dot, ok)
-WORD(test14,  test14,    enter, lit, 16, base, bang,
-                                readline,
-                                  parse, twodup, type, space,
-                                  dup, zmore, zbranch, 4,
-                                  drop, drop, branch, -12,
-                                drop, drop,
-                                ok)
-WORD(test15,  test15,    enter, ten, base, bang,
-                                readline, interpret, ok, branch, -4)
-
-WORD(test,    test,      enter,
-                                test0, test1, test2, test2a,
-                                test3, test4, test5, test6,
-                                test7, test8, //test9, cr, test10, cr,
-                                test11) //test12, cr, test13, cr,
-                                //test14, cr, //test15, //bye)
-				*/
