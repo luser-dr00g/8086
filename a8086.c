@@ -1,4 +1,5 @@
 #include<ctype.h>
+#include<inttypes.h>
 #include<stdint.h>
 #include<stdio.h>
 #include<stdlib.h>
@@ -62,7 +63,8 @@ V wput(void*p,U x){ put_(p, x, 1); }
 
 // get byte or word through cs:ip, incrementing ip
 U inc(US*p){ wput( p, 1 + wget( p ) ); }
-UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); inc(ip); if(trace)P("%02x(%03o) ",x,x); R x; }
+UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); inc(ip);
+             if(trace)P("%02llx(%03llo) ",(long long)x,(long long)x); R x; }
 US fetchw(){I w=fetchb();R w|(fetchb()<<8);}
 
 void interrupt( UC no ){
@@ -86,7 +88,7 @@ void interrupt( UC no ){
                          bput(cl,tm->tm_min);
                          bput(dh,tm->tm_sec);
                          bput(dl,tv.tv_usec/10);}
-	     CASE 0x4C: exit(wget(al));
+	     CASE 0x4C: exit(bget(al));
              }}}
 
 T struct rm{U mod,reg,r_m;}rm;      // the three fields of the mod-reg-r/m byte
@@ -116,15 +118,15 @@ U decseg(U sr){         // decode segment register
 #define RMP rm r=mrm(fetchb());\
             x=decreg(r.reg,w); \
             y=decrm(r,w); \
-            if(trace>1){ P("x:%d ",x); P("y:%d ",y); } \
+            if(trace>1){ P("x:" PRIdPTR " ",x); P("y:" PRIdPTR " ",y); } \
             p=(void*)(d?x:y); \
-            if(trace>1){ P("p:%d ",(U)p); }
+            if(trace>1){ P("p:" PRIdPTR " ",(U)p); }
 
     // fetch x and y values from x and y pointers
 #define LDXY \
             x=get_((void*)x,w); \
             y=get_((void*)y,w); \
-            if(trace){ P("x:%d ",x); P("y:%d ",y); }
+            if(trace){ P("x:" PRIdPTR " ",x); P("y:" PRIdPTR " ",y); }
 
     // normal mrm decode and load
 #define RM  RMP LDXY
@@ -160,7 +162,7 @@ U decseg(U sr){         // decode segment register
 
     // store result to p ptr
 #define RESULT \
-        if(trace)P(w?"->%04x ":"->%02x ",z); \
+        if(trace)P(w?"->%04llx ":"->%02llx ", (long long)z); \
         put_(p,z,w);
 
 // operators, composed with helpers in the opcode table below
@@ -200,7 +202,7 @@ U decseg(U sr){         // decode segment register
             b \
             d=0; \
             y=get_((void*)y,w); \
-            if(trace){ P("x:%d ",x); P("y:%d ",y); } \
+            if(trace){ P("x:" PRIdPTR " ",x); P("y:" PRIdPTR " ",y); } \
             if(trace){ \
                 P("%s ", \
                   (C*[]){"ADD","OR","ADC","SBB","AND","SUB","XOR","CMP"}[r.reg]); } \
@@ -235,16 +237,21 @@ U decseg(U sr){         // decode segment register
 #define mMOV if(d){ x=get_(mem+fetchw(),w); w?*ax=x:(*al=x); } \
              else { put_(mem+fetchw(),w?*ax:*al,w); }
 #define Offset (w+1)*(1-d*2) //(w,d)=? (0,0)=1 (1,0)=2 (0,1)=-1 (1,1)=-2
-#define MOVS put_(mem+wget(di),get_(mem+wget(si),w),w); *di+=Offset; *si+=Offset;
-#define CMPS x=(U)(mem+wget(si)); y=(U)(mem+wget(di)); d=!!(*fl&DF);\
-             if(trace){ P("x:%d ",x); P("y:%d ",y); } \
-             LDXY \
-             CMP *di+=Offset; *si+=Offset;
-#define STOS put_(di,w?*ax:*al,w); *di+=Offset;
-#define LODS if(w) *ax=get_(mem+*si,w); else *al=get_(mem+*si,w); *si+=Offset;
-#define SCAS z=(x=w?*ax:*al)-(y=get_(di,w)); LOGFLAGS ADDFLAGS *di+=Offset;
+#define MOVS put_(mem+wget(di),get_(mem+wget(si),w),w); \
+             d=!!(*fl&DF); *di+=Offset; *si+=Offset;
+#define CMPS x=(U)(mem+wget(si)); y=(U)(mem+wget(di));\
+             if(trace){ P("x:" PRIdPTR " ",x); P("y:" PRIdPTR " ",y); } \
+             LDXY CMP \
+             d=!!(*fl&DF); *di+=Offset; *si+=Offset;
+#define STOS put_(di,w?*ax:*al,w); \
+             d=!!(*fl&DF); *di+=Offset;
+#define LODS if(w) *ax=get_(mem+*si,w); else *al=get_(mem+*si,w); \
+             d=!!(*fl&DF); *si+=Offset;
+#define SCAS z=(x=w?*ax:*al)-(y=get_(di,w)); \
+             d=!!(*fl&DF); *di+=Offset; \
+             LOGFLAGS d=1; SUBFLAGS
 #define iMOVb(r) (*r)=fetchb();
-#define iMOVw(r) if(trace>1)P("r:%d ",(U)r); (*r)=fetchw();
+#define iMOVw(r) if(trace>1)P("r:" PRIxPTR " ",(U)r); (*r)=fetchw();
 #define RET(v) POP(ip); if(v)*sp+=v*2;
 #define LES
 #define LDS

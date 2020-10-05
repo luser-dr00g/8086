@@ -1,0 +1,238 @@
+Generic Interpreter design
+* Lexical analysis
+* Syntactical analysis
+* Lukasiewicz notation (the "Polish guy")
+* Reverse Polish notation
+* * Forth:
+* Byte code interpreter.
+
+X-Macros.
+
+The 8086 machine instructions
+* Interrupts
+
+Forth language
+* Forth internals
+* * Address interpreter using SI for Forth IP.
+* * Subroutine calls using ENTER EXIT and the return Stack.
+* Text Interpreter
+* boot code
+* * Compiling colon definitions.
+* * Compiling control structures.
+
+Future Work
+
+
+
+
+Generic Interpreter design
+
+text input
+    |
+    V
+lexing (lexical analysis)
+    |
+    V
+parsing (syntactical analysis
+    |
+    V
+IR (intermediate representation)        (Compiler)
+    |                             \
+    V                              \
+execute IR                      generate target code
+
+
+
+
+Lexical analysis
+breaking up the "atoms" of the language: identifiers, keywords,
+number literals, string literals, etc.
+     [state machine, regular expression]
+
+Syntactical analysis
+assembles a parse tree data structure representing the 
+"sentence structure of the language": functions, declarations,
+type designators, statements, expressions.
+  [push-down automaton]
+
+Forth removes much of this complexity by delimiting all tokens
+by spaces and using reverse polish notation that requires
+no sentence structure per se.
+
+
+
+
+
+Lukasiewicz notation (the "Polish guy")
+used a prefix language to write algebraic expressions without
+parentheses. His application was Aristotelian syllogisms so
+his operators were things like conjunction, implication, 
+disjunction, kind of a first order propositional logic.
+
+Soon after applied to computers in the 50s.
+https://stackoverflow.com/questions/22366141/how-to-understand-the-f-function-in-burks-warren-wrights-lukasiewicz-logic-mach
+
+executing a prefix language requires a hidden runtime stack.
+eg. the Logo language, a Lisp without parens.
+executing an infix language with precedence can require
+two stacks, eg. the Shunting Yard algorithm.
+
+
+
+Reverse Polish notation
+makes the runtime stack into a user visible data structure.
+The stack becomes the /work area/ and the means to pass data
+into and out of functions. eg. PostScript
+
+Forth:
+
+ 1 2 3 4 . . . .
+4 3 2 1 OK
+
+
+
+Byte code interpreter.
+
+"Compiles" the text into "byte code".
+Here the byte code chosen is 8086 machine code so the 
+execution is effected by running the 8086 machine emulator.
+
+
+
+X-Macros.
+
+Generate an enum and a string table from a single list.
+
+#define LIST(X) X(ZERO) X(ONE) X(TWO) X(THREE) X(FOUR)
+#define ENUM(X) X ,
+#define STR(X) # X ,
+enum numbers { LIST(ENUM) };
+char *names[] = { LIST(STR) };
+
+
+
+The 8086 machine instructions start with an opcode byte, eg.
+
+  0x00 add ??,??
+
+oooooodw
+
+d   - direction 0:from 1:to
+w   - 1:word 0:byte
+
+which is very often followed by a MOD-REG-REG/MEM (MRM) byte which
+has 3 fields
+
+  mm rrr xxx
+
+mm  - MOD     range [0-3]
+rrr - REG     range [0-7]
+xxx - REG/MEM range [0-7]
+
+(idea: assembler that uses C-style SSA syntax, eg. ax = ax + ax;)
+
+mode 3 register to register
+
+modes 0,1,2 accept 0, 1, or 2 immediate bytes (little endian)
+and decode the R/M field to be the contents in memory addressed
+by one of the indirect registers (or pairs).
+
+some opcodes do not take an MRM byte and instead are 
+Immediate to Accumulator, and take a byte or word (little endian) 
+immediately following the opcode byte.
+
+some opcodes like push and pop are selected by just the top 5 bits
+of the opcode byte, and the bottom 3 bits encode the register.
+
+
+
+
+Interrupts
+interface to the BIOS (basic input/output system)
+Does not currently use the standard interrupt vector
+and microcode. So the whole address space is available
+to the application.
+
+So far, only these interrupts are implemented.
+0x
+0 : div by zero
+15: toggle cpu trace
+21: DOS functions
+  AH=01: read character AL
+     02: write character AL
+     09: write string (DX)..$
+     2A: get date
+     2C: get time
+     4C: exit program
+
+
+using the read and write functions lets us implement
+KEY and EMIT Forth words, the basis of Forth I/O.
+
+
+
+
+Forth language
+https://forthworks.com/forth/standards/F79/F79.pdf
+http://www.forth.org/Ting/Forth-for-the-Complete-Idiot/Forth-79-Handy-Reference.pdf
+
+
+
+
+Forth internals
+https://www.bradrodriguez.com/papers/index.html
+  uses 5 registers for execution control
+remaining registers are available in CODE entries.
+                                   8086
+W   - working                       ax
+X   - eXtra                         bx
+IP  - instruction pointer           si
+PSP - parameter stack pointer       sp
+RSP - return stack pointer          bp
+
+Address interpreter.
+Subroutine calls using ENTER EXIT and return stack.
+
+next:
+    ax = *((si+=2)-2);
+    bx = ax;
+    bx = *bx;
+    goto *bx;
+
+
+pushrsp(r):
+    bp -= 4;
+    *bp = r;
+    
+poprsp(r):
+    r = *bp;
+    bp += 4;
+
+Text Interpreter
+    readline interpret
+
+    interpret
+             begin parse find dup 0= if number else iexec then again
+
+boot code
+  cold ->  abort ->   quit
+           resetrsp   begin resetsp accept               ok  again
+                                    readline interpret
+	                                     {error->quit}
+
+Constants and Variables as alternatives to ENTER.
+
+Compiling COLON definitions
+
+Compiling Control Structures.
+IF THEN ELSE
+DO I LEAVE LOOP
+
+
+
+
+
+Future Work.
+Implementing more 8086 instructions like REP and LOOP
+Further implementation of Forth 79 standard to read code from
+in-memory screens and DOS interface to disk files.

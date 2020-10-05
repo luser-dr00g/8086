@@ -45,6 +45,7 @@
 #undef LODS
 #undef CMPS
 #undef MOVS
+#undef SCAS
 #undef LAHF
 #undef NOT
 #undef NEG

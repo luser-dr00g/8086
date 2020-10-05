@@ -29,6 +29,7 @@
 #define             SI_   4
 #define             DI_   5
 #define             BP_   6
+#define             Z_    6
 #define             BX_   7
 #define BYTE -1
 #define           AL 0
@@ -55,9 +56,10 @@
 #define PUSH(r)   0x50+r
 #define POP(r)    0x58+r
 #define ADDAX     0x05
-#define LODS      0xad
-#define CMPS      0xa7
 #define MOVS      0xa5
+#define CMPS      0xa7
+#define LODS      0xad
+#define SCAS      0xaf
 #define JZ        0x74
 #define JNZ       0x75
 #define JS        0x78
@@ -74,11 +76,7 @@
 #define CLD       0xfc
 #define STD       0xfd
 #define INT(no)   0xCD,0x##no
-#define MOVAXI(a) 0xb8,(a)%0x100,(a)/0x100
-#define MOVCXI(a) 0xb9,(a)%0x100,(a)/0x100
-#define MOVDXI(a) 0xba,(a)%0x100,(a)/0x100
-#define MOVBXI(a) 0xbb,(a)%0x100,(a)/0x100
-#define MOVSPI(a) 0xbc,(a)%0x100,(a)/0x100
-#define MOVBPI(a) 0xbd,(a)%0x100,(a)/0x100
-#define MOVSII(a) 0xbe,(a)%0x100,(a)/0x100
-#define CALL    0xE8
+#define LITTLEENDIAN(w) (w)%0x100,(w)/0x100
+#define MOVI(r,a) 0xb8+r,LITTLEENDIAN(a)
+#define MOVBI(r,a) 0xb0+r,a
+#define CALL      0xE8
