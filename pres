@@ -1,27 +1,130 @@
-Generic Interpreter design
-* Lexical analysis
-* Syntactical analysis
-* Lukasiewicz notation (the "Polish guy")
-* Reverse Polish notation
-* * Forth:
-* Byte code interpreter.
+I've been working a Forth interpreter as a side project, it's almost
+powerful enough to be considered a primitive OS. With some help from
+comp.lang.forth it can define procedures with control structures and
+execute them.
 
-X-Macros.
+$ ./a8086
+0 var !
+OK
+4 var push 5 var push 6 var push
+OK
+var pop . var pop . var pop .
+6 5 4 OK
+: a 0 if 6 else 7 then ;
+OK
+a .
+7 OK
+: b 1 if 6 else 7 then ;
+OK
+b .
+6 OK
+bye
 
-The 8086 machine instructions
-* Interrupts
+https://github.com/luser-dr00g/8086
 
-Forth language
-* Forth internals
-* * Address interpreter using SI for Forth IP.
-* * Subroutine calls using ENTER EXIT and the return Stack.
-* Text Interpreter
-* boot code
-* * Compiling colon definitions.
-* * Compiling control structures.
+...
 
-Future Work
+ I've been thinking about it and I probably could do a talk about
+ interpreters. I've written ones for PostScript, Lisp, BF, APL, and
+ recently Forth.  The Forth one is the most bizarre, but perhaps easy
+ to talk about because it's very short.
 
+https://github.com/luser-dr00g/8086
+$ make count
+wc a8086.c asm8086.h fdict.h forth3.h undefs.h cp437.h
+  465  2233 21671 a8086.c
+   86   269  2589 asm8086.h
+  104   468  3024 fdict.h
+  479  2260 25588 forth3.h
+   61   122   875 undefs.h
+   47   200  1988 cp437.h
+ 1242  5552 55735 total
+ 
+I haven't really thought through any of the details.  I could do an
+overview of the whole process: lexing, parsing, IR, execution. And
+supplement with specific examples.  If it's concentrated on the Forth
+interpreter, I'd probably focus on the details of 8086 machine code
+instruction formats, execution of the byte code, and then the higher
+level parts like assembling the instructions and how the Indirect
+Threaded Code works.
+
+...
+
+I'm planning to do a talk in a few weeks for the Computer Club about
+my Forth interpreter. It will cover 8086 machine code
+assembly/disassembly and the behavior of the classic Indirect Threaded
+Code model of early Forths (modern ones typically do it
+differently).Generic Interpreter design
+
+...
+Outline interspersed with clf discussion about my plan for this talk.
+
+I joined up with my school's Computer Club and offered
+to give a talk about my forth interpreter. So I've made
+a half-hearted outline of the topics that I need to cover.
+Anything seem amiss or missing? Will this be interesting
+to a group of a dozen undergrads?
+
+
+    * Lexical analysis
+    * Syntactical analysis
+    * Lukasiewicz notation (the "Polish guy")
+    * Reverse Polish notation
+    * * Forth:
+    * Byte code interpreter.
+
+    X-Macros. --aggressive factoring into a CPP DSL
+
+    The 8086 machine instructions
+    * Interrupts
+
+    Forth language
+    * Forth internals
+    * * Address interpreter using SI for Forth IP.
+    * * Subroutine calls using ENTER EXIT and the return Stack.
+    * Defining CODE words and WORD words in the Forth dictionary.
+    * Text Interpreter
+    * boot code
+    * * Compiling colon definitions.
+    * * Compiling control structures.
+
+    Future Work
+
+
+...
+
+> > That should fill up the better part of an hour and leave room
+> > for questions I think. Thanks, rubberducks!
+>
+Rick C wrote:
+> Do you have any idea of the level of knowledge of your audience?
+>
+
+I think most of them are at least sophomore level CS student. I'd guess
+a few have taken compilers and all have written moderately complex
+C and/or Java programs. Some will have taken the machine architecture
+course which when I took it (20 years ago) covered 8086 assembly
+(or maybe it was pretend 8086 in a 386 contect), but not to the level
+of encoding the machine instructions.
+
+A.K. wrote:
+> Just my 5 cents:
+> 
+> From a didactical viewpoint it can be 'counterproductive' (to say it mildly)
+> to stress Forth's exoticicims by explaining the gory innards of a Forth
+> interpreter. Many modern Forth's are native code compilers btw...
+> 
+> It might make more sense to explain Forth's strength by use cases. Probably the
+> most important use case being flexible programming of embedded small devices.
+
+That makes sense for the purpose of teaching Forth. I think my porpose
+here is more to show off my code and explain how it works. So some degree
+of gory innards are necessary for the code to be comprehensible.
+
+I'm only just at the threshold of starting to write code *in* Forth
+to run on the interpreter. I want to get it to read from memory so I
+can write code in 64 char-per-line screens. Then maybe I'll find some
+application to try to build using it, probably an interpreter lol.
 
 
 
@@ -74,8 +177,11 @@ https://stackoverflow.com/questions/22366141/how-to-understand-the-f-function-in
 
 executing a prefix language requires a hidden runtime stack.
 eg. the Logo language, a Lisp without parens.
+
 executing an infix language with precedence can require
-two stacks, eg. the Shunting Yard algorithm.
+two stacks, eg. the Shunting Yard algorithm, APL algorithm
+or a tree, eg. Tree-Meta, typical CST->AST transform (often AST=IR)
+
 
 
 
@@ -91,11 +197,22 @@ Forth:
 
 
 
+
 Byte code interpreter.
 
 "Compiles" the text into "byte code".
 Here the byte code chosen is 8086 machine code so the 
 execution is effected by running the 8086 machine emulator.
+
+
+Runtime support functions.
+
+Roughly half the language is implemented in the lower level language
+(here preprocessor "assembly code")
+
+The other half is implemented in the high level language as procedures or functions 
+(here precompiled forth words with branching all manually calculated)
+
 
 
 
@@ -108,6 +225,10 @@ Generate an enum and a string table from a single list.
 #define STR(X) # X ,
 enum numbers { LIST(ENUM) };
 char *names[] = { LIST(STR) };
+
+for more:
+https://stackoverflow.com/q/6635851/733077
+
 
 
 
@@ -144,6 +265,12 @@ immediately following the opcode byte.
 some opcodes like push and pop are selected by just the top 5 bits
 of the opcode byte, and the bottom 3 bits encode the register.
 
+debugged with help from comp.lang.postscript:
+https://groups.google.com/d/topic/comp.lang.postscript/6-wfOlxeugk/discussion
+debugged with help from comp.lang.asm.x86:
+https://groups.google.com/d/topic/comp.lang.asm.x86/8Q81D3PURFI/discussion
+https://groups.google.com/d/topic/comp.lang.asm.x86/3vgU39806jo/discussion
+
 
 
 
@@ -152,6 +279,9 @@ interface to the BIOS (basic input/output system)
 Does not currently use the standard interrupt vector
 and microcode. So the whole address space is available
 to the application.
+
+implemented with help from stackExchange
+https://retrocomputing.stackexchange.com/q/6610/509
 
 So far, only these interrupts are implemented.
 0x
@@ -169,7 +299,10 @@ So far, only these interrupts are implemented.
 using the read and write functions lets us implement
 KEY and EMIT Forth words, the basis of Forth I/O.
 
+decoding and executing instructions by table lookup and function call.
 
+assembling instructions by generating comma separated lists of 
+(constant expressions yielding) byte values.
 
 
 Forth language
@@ -191,7 +324,17 @@ PSP - parameter stack pointer       sp
 RSP - return stack pointer          bp
 
 Address interpreter.
+    si points into the array of addresses
+    each code word ends in NEXT to advance through the array
+         and jump to the next code word
+
 Subroutine calls using ENTER EXIT and return stack.
+    high level word definitions have a pointer to enter in the code field
+        array of addresses ends with exit
+    enter pushes si on the return stack and sets si to the param field
+        the NEXT which ends this code word jumps into the first word of the subroutine
+    exit pops si from the return stack
+        the NEXT which ends this coce word jumps to the next address after the subr call
 
 next:
     ax = *((si+=2)-2);
@@ -207,12 +350,38 @@ pushrsp(r):
 poprsp(r):
     r = *bp;
     bp += 4;
+    
+
+
+Defining CODE words and WORD words in the Forth dictionary.
+
+Expanding __VA_ARGS__ into the declaration of either a 
+byte array or a short array. The __VA_ARGS__ contain either
+the result of the Assembly macros or a list of addresses 
+of the cfa of predefined words.
+
+Uses pointer p as the write head into memory. int link keeps
+track of the link field of the last entry. So all definitions
+form a linked list.
+
+
 
 Text Interpreter
     readline interpret
 
     interpret
-             begin parse find dup 0= if number else iexec then again
+      begin parse find dup 0= if number else iexec then again
+
+    iexec
+      execomp
+      
+    execomp
+      state @ 0= over isimmed or if execute else comma then
+      
+    comma
+      here ! 2 allot
+      
+
 
 boot code
   cold ->  abort ->   quit
@@ -220,19 +389,103 @@ boot code
                                     readline interpret
 	                                     {error->quit}
 
+
+
 Constants and Variables as alternatives to ENTER.
+
+             cfa     pfa
+  constant  docon  -value-
+  variable  dovar  -value-
+  procedure enter  -high-level-code- exit
+
+
 
 Compiling COLON definitions
 
+ colon
+   create  lit smudged !flags  !name !colon link! ]
+   
+ semi
+   [compile] exit
+   latest 0 !flags drop [
+
+ ]  //begin compiling
+   state 1 !
+ [  //begin interpreting
+   state 0 !
+
+
+
+
 Compiling Control Structures.
+
 IF THEN ELSE
+
+   : a dup 0 = if 4 else 5 then ;
+   (1,'a',0,...enter, dup, zero, eq, zbranch, 3, four, branch, 1, five, exit)
+
+          dup  0     =   IF
+   enter, dup, zero, eq, zbranch, PATCH1,
+   stack> addr1
+
+   4     ELSE
+   four, branch, PATCH2
+   stack> addr2   *patch1=here-patch1
+   
+   5     THEN
+   five, 
+   stack> -    *patch2=here-patch2
+   
+   ;
+   exit
+
+
+
+
 DO I LEAVE LOOP
 
+   : b 10 0 do i . leave loop ;
+   (a,'b',0,...enter, ten, zero, (do), i, dot, leave, (loop), -5, exit)
+ 
+       compilation                              runtime behavior
 
+          10   0     DO
+   enter, ten, zero, (do),                  (do)  >r >r
+   stack> addr1
 
+   i  . 
+   i, dot,                                    i   <r <r dup >r swap >r
+   
+   leave
+   leave,                                   leave  <r <r drop dup >r >r
+   
+   LOOP
+   (loop), addr1-here                       (loop) <r <r 2dup < if branch_back then
+                                                                
+   
+   ;
+   exit
 
 
 Future Work.
+
 Implementing more 8086 instructions like REP and LOOP
+
 Further implementation of Forth 79 standard to read code from
+
 in-memory screens and DOS interface to disk files.
+
+Dual-XT system for separate interpret/compile behaviors.
+https://groups.google.com/d/topic/comp.lang.forth/GyzL0wIENUw/discussion
+
+
+
+
+Much gratitude to correspondents in comp.lang.forth
+https://groups.google.com/d/topic/comp.lang.forth/dz6vHroA6C8/discussion
+https://groups.google.com/d/topic/comp.lang.forth/OBwiKKDqgto/discussion
+https://groups.google.com/d/topic/comp.lang.forth/Ty8YDZ3R1uw/discussion
+https://groups.google.com/d/topic/comp.lang.forth/72Wymtu7cMI/discussion
+https://groups.google.com/d/topic/comp.lang.forth/NfdVP_q30vw/discussion
+https://groups.google.com/d/topic/comp.lang.forth/mSOMRV37EVE/discussion
+https://groups.google.com/d/topic/comp.lang.forth/X3G1Nn6AsKo/discussion

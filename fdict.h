@@ -8,7 +8,7 @@ struct code_entry {
   UC name_len;
   UC name[ MAX_NAME ];
   US code;
-  //UC param[ MAX_CODE_PARAM ];
+  //UC param[ MAX_CODE_PARAM ];  // param changed to variable length
 };
 
 struct headless_entry {
