@@ -180,18 +180,19 @@ assembles a parse tree data structure representing the
 type designators, statements, expressions.
   [push-down automaton]
 
-Forth removes much of this complexity by delimiting all tokens
-by spaces and using reverse polish notation that requires
-no sentence structure per se.
+Forth removes much of this complexity by delimiting all tokens by
+spaces and using reverse polish notation that requires no sentence
+structure per se.
 
 
 
 
 
-Lukasiewicz notation (the "Polish guy")
-used a prefix language to write algebraic expressions without
-parentheses. His application was Aristotelian syllogisms so
-his operators were things like conjunction, implication, 
+Lukasiewicz notation
+
+(the "Polish guy") used a prefix language to write algebraic
+expressions without parentheses. His application was Aristotelian
+syllogisms so his operators were things like conjunction, implication,
 disjunction, kind of a first order propositional logic.
 
 Soon after applied to computers in the 50s.
@@ -201,16 +202,17 @@ executing a prefix language requires a hidden runtime stack.
 eg. the Logo language, a Lisp without parens.
 
 executing an infix language with precedence can require
-two stacks, eg. the Shunting Yard algorithm, APL algorithm
-or a tree, eg. Tree-Meta, typical CST->AST transform (often AST=IR)
+- two stacks, eg. the Shunting Yard algorithm, APL algorithm
+- or a tree, eg. Tree-Meta, typical CST->AST transform (often AST=IR)
 
 
 
 
 Reverse Polish notation
-makes the runtime stack into a user visible data structure.
-The stack becomes the /work area/ and the means to pass data
-into and out of functions. eg. PostScript
+
+makes the runtime stack into a user visible data structure. The stack
+becomes the /work area/ and the means to pass data into and out of
+functions. eg. PostScript
 
 Forth:
 
@@ -254,6 +256,8 @@ https://stackoverflow.com/q/6635851/733077
 
 
 
+8086 Machine
+
 The 8086 machine instructions start with an opcode byte, eg.
 
   0x00 add ??,??
@@ -296,8 +300,20 @@ https://groups.google.com/d/topic/comp.lang.asm.x86/3vgU39806jo/discussion
 
 
 
+Executing of the emulator
+
+Decoding and executing instructions by table lookup and function call.
+
+Assembling instructions by generating comma separated lists of 
+(constant expressions yielding) byte values.
+
+
+
+
 Interrupts
+
 interface to the BIOS (basic input/output system)
+
 Does not currently use the standard interrupt vector
 and microcode. So the whole address space is available
 to the application.
@@ -318,29 +334,49 @@ So far, only these interrupts are implemented.
      4C: exit program
 
 
-using the read and write functions lets us implement
-KEY and EMIT Forth words, the basis of Forth I/O.
 
-decoding and executing instructions by table lookup and function call.
+Bridge to Higher Level
 
-assembling instructions by generating comma separated lists of 
-(constant expressions yielding) byte values.
+(each new feature often requires implementing the low level ABI,
+then writing assembly code to wrok with it,
+and then writing precompiled Forth code to work with that)
+
+Using the read and write DOS functions lets us implement
+KEY and EMIT CODE words, the basis of Forth I/O.
+
+Then the Forth words READLINE and INTERPRET build upon KEY,
+using a string buffer that builds upon VARIABLE with extra storage space.
+And . (ie. DOT) can print out numbers building upon EMIT.
+
+
+
+
 
 
 Forth language
+
+Implements many of the words defined in:
 https://forthworks.com/forth/standards/F79/F79.pdf
 http://www.forth.org/Ting/Forth-for-the-Complete-Idiot/Forth-79-Handy-Reference.pdf
+
+Future goal is to conform to the 79 standard and then forward from there.
 
 
 
 
 Forth internals
+
+Implemented with much assistance from the series Moving Forth:
 https://www.bradrodriguez.com/papers/index.html
-  uses 5 registers for execution control
-remaining registers are available in CODE entries.
+
+Uses 5 registers for execution control
+  remaining registers are available in CODE entries.
+  uses indirect jumps and a pointer to walk through arrays of addresses
+                                                    comprising Forth WORD definitions
+
                                    8086
-W   - working                       ax
-X   - eXtra                         bx
+W   - working                       ax     (used by NEXT but otherwise available)
+X   - eXtra                         bx     (used by NEXT but otherwise available)
 IP  - instruction pointer           si
 PSP - parameter stack pointer       sp
 RSP - return stack pointer          bp
@@ -372,6 +408,7 @@ pushrsp(r):
 poprsp(r):
     r = *bp;
     bp += 4;
+
     
 
 
@@ -385,6 +422,17 @@ of the cfa of predefined words.
 Uses pointer p as the write head into memory. int link keeps
 track of the link field of the last entry. So all definitions
 form a linked list.
+
+CODE words and WORD words have a code field which is the address
+to jump to in order to execute this word. For a WORD, the code field
+is the address of ENTER. For CODE words, the code field is the address
+of the param field where the machine code is including the terminating
+NEXT code.
+
+A few special words are HEADLESS, which means they do not have
+a code field. Instead the machine code just starts there.
+This is so the address of this code, eg. ENTER, can be placed in 
+code field of WORDs, and the machine code is just one indirection away.
 
 
 
@@ -417,7 +465,9 @@ Constants and Variables as alternatives to ENTER.
 
              cfa     pfa
   constant  docon  -value-
+              push_constant -value-
   variable  dovar  -value-
+              push_address_of -value-    // addr --@-- value     value addr --!-- --
   procedure enter  -high-level-code- exit
 
 
