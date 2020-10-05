@@ -126,6 +126,28 @@ to run on the interpreter. I want to get it to read from memory so I
 can write code in 64 char-per-line screens. Then maybe I'll find some
 application to try to build using it, probably an interpreter lol.
 
+A.K. wrote:
+> Okay. So it is more of an assembler programming show, with building a Forth
+> interpreter as use case.
+
+Right. At least that's the level where I'm most qualified to speak.
+I simply haven't written any significant amount of Forth code per se.
+
+The modest milestone for this interpreter will be implementing the 79
+standard. Then I'll assess and decide what to do further.
+
+Incidentally, the current draft outline is here, including all the
+blurbs and thoughts leading up to and including the discussion
+cribbed from this thread (in order to be ever so much more
+metacircular):
+https://github.com/luser-dr00g/8086/blob/master/pres
+
+So, the record shows your objection that this is not the way to
+learn Forth.
+
+...
+
+
 
 
 Generic Interpreter design
