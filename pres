@@ -1,3 +1,11 @@
+Current version:
+https://github.com/luser-dr00g/8086/blob/master/pres
+
+
+
+The Hype Train...
+
+
 I've been working a Forth interpreter as a side project, it's almost
 powerful enough to be considered a primitive OS. With some help from
 comp.lang.forth it can define procedures with control structures and
@@ -54,7 +62,7 @@ I'm planning to do a talk in a few weeks for the Computer Club about
 my Forth interpreter. It will cover 8086 machine code
 assembly/disassembly and the behavior of the classic Indirect Threaded
 Code model of early Forths (modern ones typically do it
-differently).Generic Interpreter design
+differently).
 
 ...
 Outline interspersed with clf discussion about my plan for this talk.
@@ -65,7 +73,7 @@ a half-hearted outline of the topics that I need to cover.
 Anything seem amiss or missing? Will this be interesting
 to a group of a dozen undergrads?
 
-
+    Generic Interpreter design
     * Lexical analysis
     * Syntactical analysis
     * Lukasiewicz notation (the "Polish guy")
@@ -100,11 +108,11 @@ Rick C wrote:
 > Do you have any idea of the level of knowledge of your audience?
 >
 
-I think most of them are at least sophomore level CS student. I'd guess
+I think most of them are at least sophomore level CS students. I'd guess
 a few have taken compilers and all have written moderately complex
 C and/or Java programs. Some will have taken the machine architecture
 course which when I took it (20 years ago) covered 8086 assembly
-(or maybe it was pretend 8086 in a 386 contect), but not to the level
+(or maybe it was pretend 8086 in a 386 context), but not to the level
 of encoding the machine instructions.
 
 A.K. wrote:
@@ -180,10 +188,6 @@ assembles a parse tree data structure representing the
 type designators, statements, expressions.
   [push-down automaton]
 
-Forth removes much of this complexity by delimiting all tokens by
-spaces and using reverse polish notation that requires no sentence
-structure per se.
-
 
 
 
@@ -219,14 +223,43 @@ Forth:
  1 2 3 4 . . . .
 4 3 2 1 OK
 
+Forth removes much of the complexity of lexing and parsing by
+delimiting all tokens by spaces and using reverse polish notation that
+requires no sentence structure per se.
+
+So the top level interpreter design becomes
+
+text input
+    |
+    V
+parse space-delimited word
+    |
+    V
+lookup and execute or compile
+
 
 
 
 Byte code interpreter.
 
-"Compiles" the text into "byte code".
-Here the byte code chosen is 8086 machine code so the 
-execution is effected by running the 8086 machine emulator.
+A byte code interpreter compiles the text into byte code.
+
+Here we have 2 levels
+
+1 word code is array of addresses of byte code
+  - execution is effected by pointing IP into the array and doing NEXT
+
+2 byte code is 8086 machine code so the 
+  - execution is effected by running the 8086 machine emulator.
+
+With an appropriate set of words, we could write machine
+code *in Forth* by invoking Assembler words that build 
+and compile machine code instructions.
+
+At a further level of optimization, WORDs could be compiled by concatenating
+the machine code for each code word and omitting the NEXT code.
+
+
 
 
 Runtime support functions.
@@ -235,12 +268,14 @@ Roughly half the language is implemented in the lower level language
 (here preprocessor "assembly code")
 
 The other half is implemented in the high level language as procedures or functions 
-(here precompiled forth words with branching all manually calculated)
+(here precompiled forth words with manually calculated branching)
 
 
 
 
 X-Macros.
+
+My favorite C trick.
 
 Generate an enum and a string table from a single list.
 
@@ -300,7 +335,7 @@ https://groups.google.com/d/topic/comp.lang.asm.x86/3vgU39806jo/discussion
 
 
 
-Executing of the emulator
+Execution of the emulator
 
 Decoding and executing instructions by table lookup and function call.
 
@@ -338,7 +373,7 @@ So far, only these interrupts are implemented.
 Bridge to Higher Level
 
 (each new feature often requires implementing the low level ABI,
-then writing assembly code to wrok with it,
+then writing assembly code to work with it,
 and then writing precompiled Forth code to work with that)
 
 Using the read and write DOS functions lets us implement
@@ -544,7 +579,6 @@ Future Work.
 Implementing more 8086 instructions like REP and LOOP
 
 Further implementation of Forth 79 standard to read code from
-
 in-memory screens and DOS interface to disk files.
 
 Dual-XT system for separate interpret/compile behaviors.

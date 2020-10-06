@@ -6,3 +6,7 @@ a8086:$(SRC)
 
 count:
 	wc $(SRC)
+
+a8086.pp:$(SRC)
+	cpp -P $< >$@
+	indent $@ 2>/dev/null
