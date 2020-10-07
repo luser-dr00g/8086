@@ -14,7 +14,7 @@
 static inline void nop_(){}
 
 static inline int
-forth(char *start){
+forth(char *mem, char *start){
 char *p = start;
 unsigned link = 0;
 enum flag { immediate = 1, smudged = 2 };
@@ -405,9 +405,9 @@ WORD(."",     dotquote,  enter, lit, '"', word,
                                 compile, lit, from_r, comma,
                                 compile, lit, from_r, comma,
                                 compile, type)
-  ((struct word_entry *)(start+link))->name_len = 2;
+  ((struct word_entry *)(mem+link))->name_len = 2;
 WORD((),  lparen,    enter, lit, ')', word, twodrop)
-  ((struct word_entry *)(start+link))->name_len = 1;
+  ((struct word_entry *)(mem+link))->name_len = 1;
 
 WORD(;,       semi,      enter, //lit, ';', emit,
                                 compile, c_exit, //latest, dot, twodup, dot, dot,
@@ -458,10 +458,10 @@ WORD(quit,      quit,      enter, resetsp, accept, ok, branch, -4)
 WORD(abort,     abort,     enter, resetrsp, lbracket, quit)
 HEADLESS(cold,  cold,      MOVI(SI,abort+2))
 
-memcpy( start+errout+2, (US[]){ quit }, 2 );
-memcpy( start+_abort_+2, (US[]){ abort }, 2 );
-memcpy( start+dp+2, (US[]){ p-start }, 2 );
-memcpy( start+latest+2, (US[]){ link }, 2 );
+memcpy( mem+errout+2, (US[]){ quit }, 2 );
+memcpy( mem+_abort_+2, (US[]){ abort }, 2 );
+memcpy( mem+dp+2, (US[]){ p-mem }, 2 );
+memcpy( mem+latest+2, (US[]){ link }, 2 );
 
 nop_();
 { UC x[] = { JMPAX(cold) }; memcpy( start, x, sizeof x ); } // boot code
@@ -474,7 +474,7 @@ char src[] =
   "                                                                "
   "                                                                "
 ;
-p = start + 0xC000;
+p = mem + 0xC000;
 memcpy( p, src, sizeof src );
 
 if(trace){P("\n");}

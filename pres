@@ -6,7 +6,7 @@ https://github.com/luser-dr00g/8086/blob/master/pres
 The Hype Train...
 
 
-I've been working a Forth interpreter as a side project, it's almost
+I've been working on a Forth interpreter as a side project, it's almost
 powerful enough to be considered a primitive OS. With some help from
 comp.lang.forth it can define procedures with control structures and
 execute them.
@@ -121,7 +121,14 @@ A.K. wrote:
 > From a didactical viewpoint it can be 'counterproductive' (to say it mildly)
 > to stress Forth's exoticicims by explaining the gory innards of a Forth
 > interpreter. Many modern Forth's are native code compilers btw...
+
+Anton Ertl wrote:
+> Understanding how Forth worked is what got me hooked.
 > 
+> Also, I think his presentation is about his interpreter, and Forth is
+> only explained in order to explain that, not the other way round.
+
+A.K. wrote:
 > It might make more sense to explain Forth's strength by use cases. Probably the
 > most important use case being flexible programming of embedded small devices.
 
@@ -152,6 +159,28 @@ https://github.com/luser-dr00g/8086/blob/master/pres
 
 So, the record shows your objection that this is not the way to
 learn Forth.
+
+Anton Ertl wrote:
+[after notes on lexing/parsing]
+> If the audience is somewhat familiar with compiler construction, then
+> this is a nice example of how the Forth approach simplifies things.
+> If not, you burden your talk with a lot of material just to explain
+> that it is unneeded.
+
+[after getting to RPN]
+> Again, if the audience is theoretically inclined, this is the
+> classical way to inflate their egos by showing that practical stuff is
+> always derived from older theoretical ("fundamental") work.  If not,
+> no need for the detour through Lukasiewicz.  Note that you leave RPN
+> as soon as you use the first DUP or SWAP.  You could just directly say
+> that many compilers and interpreters use a stack-based IR because it
+> allows simple expression evaluation with (in theory) arbitrarily many
+> intermediate results, and that Forth simplification eliminates the
+> infix->postfix translation step by letting the programmer express the
+> stuff directly in a stack-based way.
+
+> And then you better show that this has advantages beyond making the
+> compiler writer's life easier:-)
 
 ...
 
@@ -326,6 +355,9 @@ immediately following the opcode byte.
 some opcodes like push and pop are selected by just the top 5 bits
 of the opcode byte, and the bottom 3 bits encode the register.
 
+ref:
+http://bitsavers.org/components/intel/8086/9800722-03_The_8086_Family_Users_Manual_Oct79.pdf
+
 debugged with help from comp.lang.postscript:
 https://groups.google.com/d/topic/comp.lang.postscript/6-wfOlxeugk/discussion
 debugged with help from comp.lang.asm.x86:
@@ -341,6 +373,7 @@ Decoding and executing instructions by table lookup and function call.
 
 Assembling instructions by generating comma separated lists of 
 (constant expressions yielding) byte values.
+(Assemblers and Macro processors have a long and intimate history. eg. MACRO-11)
 
 
 
@@ -370,6 +403,7 @@ So far, only these interrupts are implemented.
 
 
 
+
 Bridge to Higher Level
 
 (each new feature often requires implementing the low level ABI,
@@ -386,13 +420,14 @@ And . (ie. DOT) can print out numbers building upon EMIT.
 
 
 
-
-
 Forth language
 
 Implements many of the words defined in:
 https://forthworks.com/forth/standards/F79/F79.pdf
 http://www.forth.org/Ting/Forth-for-the-Complete-Idiot/Forth-79-Handy-Reference.pdf
+and:
+http://forth.org/OffeteStore/1010_SystemsGuideToFigForth.pdf
+http://www.forth.org/fig-forth/fig-forth_8086-8088_ver_10.pdf
 
 Future goal is to conform to the 79 standard and then forward from there.
 
@@ -401,7 +436,7 @@ Future goal is to conform to the 79 standard and then forward from there.
 
 Forth internals
 
-Implemented with much assistance from the series Moving Forth:
+Implemented with much guidance from the series Moving Forth:
 https://www.bradrodriguez.com/papers/index.html
 
 Uses 5 registers for execution control
@@ -412,9 +447,9 @@ Uses 5 registers for execution control
                                    8086
 W   - working                       ax     (used by NEXT but otherwise available)
 X   - eXtra                         bx     (used by NEXT but otherwise available)
-IP  - instruction pointer           si
-PSP - parameter stack pointer       sp
-RSP - return stack pointer          bp
+IP  - Instruction Pointer           si
+PSP - Parameter Stack Pointer       sp
+RSP - Return Stack Pointer          bp
 
 Address interpreter.
     si points into the array of addresses
@@ -471,6 +506,7 @@ code field of WORDs, and the machine code is just one indirection away.
 
 
 
+
 Text Interpreter
     readline interpret
 
@@ -496,6 +532,7 @@ boot code
 
 
 
+
 Constants and Variables as alternatives to ENTER.
 
              cfa     pfa
@@ -504,6 +541,7 @@ Constants and Variables as alternatives to ENTER.
   variable  dovar  -value-
               push_address_of -value-    // addr --@-- value     value addr --!-- --
   procedure enter  -high-level-code- exit
+
 
 
 
@@ -574,9 +612,13 @@ DO I LEAVE LOOP
    exit
 
 
+
+
 Future Work.
 
-Implementing more 8086 instructions like REP and LOOP
+Implementing more 8086 instructions like REP and LOOP.
+
+Implement interrupt vector table and access host functions through nop opcodes.
 
 Further implementation of Forth 79 standard to read code from
 in-memory screens and DOS interface to disk files.

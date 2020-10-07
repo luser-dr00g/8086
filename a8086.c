@@ -464,7 +464,9 @@ I main(I c,C**v){
     init();
     if(c>1){            // if there's an argument
         load(v[1]);     //     load named file
-    }else forth(mem);
+    }else{
+        forth( mem, mem + (*ip=0x100) );
+    }
     *sp=0xF000;          // initialize stack pointer
     if(debug) dbg();    // if debugging, debug
     else run();         // otherwise, just run
