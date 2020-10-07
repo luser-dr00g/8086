@@ -91,9 +91,37 @@ void interrupt( UC no ){
 	     CASE 0x4C: exit(bget(al));
              }}}
 
+void escape( UC vv[7] ){
+  if(trace)P( "%" PRIxPTR " ", (U)vv[0] );
+  switch( vv[0] ){
+  CASE 0x00: printf("div by zero trap\n"); P("ip:%" PRIxPTR, (U)wget(mem+*sp)); dump();
+  CASE 0x15: trace = 1 - trace;
+  CASE 0x21: switch(bget(ah)){
+             CASE 0x01: bput(al, fgetc(stdin));
+             CASE 0x02: fputs( cp437tounicode( bget(dl) ), stdout );
+                        bput(al,bget(dl)); if(bget(al)=='\t')bput(al,' ');
+	     CASE 0x09: f=wget(dx);
+                        while(mem[f]!='$')fputs( cp437tounicode( mem[f++] ), stdout );
+                        bput(al,'$');
+	     CASE 0x2A: {time_t t=time(NULL);struct tm*tm=localtime(&t);
+	                 wput(cx,tm->tm_year);
+                         wput(dh,tm->tm_mon);
+                         wput(dl,tm->tm_mday);
+                         wput(al,tm->tm_wday);}
+	     CASE 0x2C: {struct timeval tv;gettimeofday(&tv,0);
+                         time_t t=time(NULL);struct tm*tm=localtime(&t);
+                         bput(ch,tm->tm_hour);
+                         bput(cl,tm->tm_min);
+                         bput(dh,tm->tm_sec);
+                         bput(dl,tv.tv_usec/10);}
+	     CASE 0x4C: exit(bget(al));
+             }
+  }
+}
+
 T struct rm{U mod,reg,r_m;}rm;      // the three fields of the mod-reg-r/m byte
 rm mrm(U m){ R(rm){ (m>>6)&3, (m>>3)&7, m&7 }; }    // crack the mrm byte into fields
-U decreg(U reg,U w){    // decode the reg field, yielding a uintptr_t to the register (byte or word)
+U decreg(U reg,U w){    // decode the reg field, yielding a uintptr_t to the register (byte/word)
     if (w)R (U)((US*[]){ax,cx,dx,bx,sp,bp,si,di}[reg]);
     else R (U)((UC*[]){al,cl,dl,bl,ah,ch,dh,bh}[reg]); }
 U rs(US*x,US*y){ R get_(x,1)+get_(y,1); }  // fetch and sum two full-words
@@ -118,15 +146,15 @@ U decseg(U sr){         // decode segment register
 #define RMP rm r=mrm(fetchb());\
             x=decreg(r.reg,w); \
             y=decrm(r,w); \
-            if(trace>1){ P("x:" PRIdPTR " ",x); P("y:" PRIdPTR " ",y); } \
+            if(trace>1){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); } \
             p=(void*)(d?x:y); \
-            if(trace>1){ P("p:" PRIdPTR " ",(U)p); }
+            if(trace>1){ P("p:%" PRIdPTR " ",(U)p); }
 
     // fetch x and y values from x and y pointers
 #define LDXY \
             x=get_((void*)x,w); \
             y=get_((void*)y,w); \
-            if(trace){ P("x:" PRIdPTR " ",x); P("y:" PRIdPTR " ",y); }
+            if(trace){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); }
 
     // normal mrm decode and load
 #define RM  RMP LDXY
@@ -202,7 +230,7 @@ U decseg(U sr){         // decode segment register
             b \
             d=0; \
             y=get_((void*)y,w); \
-            if(trace){ P("x:" PRIdPTR " ",x); P("y:" PRIdPTR " ",y); } \
+            if(trace){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); } \
             if(trace){ \
                 P("%s ", \
                   (C*[]){"ADD","OR","ADC","SBB","AND","SUB","XOR","CMP"}[r.reg]); } \
@@ -223,7 +251,7 @@ U decseg(U sr){         // decode segment register
                y=decrm(r,w); \
                z=*(US*)(d?x:y)=*(US*)(d?y:x);
 #define LEA RMP z=((UC*)y)-mem; p=(void*)x; RESULT
-#define NOP (void)0;
+#define NOP(n) (void)0;
 #define AXCH(r) x=(U)ax; y=(U)(r); w=1; XCHG
 #define CBW *ax=(S)(C)*al;
 #define CWD z=(I)(S)*ax; *dx=-(z>>15);
@@ -240,7 +268,7 @@ U decseg(U sr){         // decode segment register
 #define MOVS put_(mem+wget(di),get_(mem+wget(si),w),w); \
              d=!!(*fl&DF); *di+=Offset; *si+=Offset;
 #define CMPS x=(U)(mem+wget(si)); y=(U)(mem+wget(di));\
-             if(trace){ P("x:" PRIdPTR " ",x); P("y:" PRIdPTR " ",y); } \
+             if(trace){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); } \
              LDXY CMP \
              d=!!(*fl&DF); *di+=Offset; *si+=Offset;
 #define STOS put_(di,w?*ax:*al,w); \
@@ -251,15 +279,18 @@ U decseg(U sr){         // decode segment register
              d=!!(*fl&DF); *di+=Offset; \
              LOGFLAGS d=1; SUBFLAGS
 #define iMOVb(r) (*r)=fetchb();
-#define iMOVw(r) if(trace>1)P("r:" PRIxPTR " ",(U)r); (*r)=fetchw();
+#define iMOVw(r) if(trace>1)P("r:%" PRIxPTR " ",(U)r); (*r)=fetchw();
 #define RET(v) POP(ip); if(v)*sp+=v*2;
 #define LES
 #define LDS
 #define iMOVm if(w){iMOVw((US*)y)}else{iMOVb((UC*)y)}
 #define fRET(v) POP(cs); RET(v)
-#define INT(v) interrupt(v);
-#define INT0   //div by zero trap
-#define IRET
+#define INT(v) f = wget(mem+4*v); PUSH(fl); PUSH(cs); PUSH(ip); \
+               /**cs = wget(mem+4*v+2);*/ \
+               *ip = f; \
+               if(trace)P("ip=%" PRIxPTR " ",(U)*ip);
+#define INT0   INT(0) //div by zero trap
+#define IRET POP(ip); POP(cs); POP(fl);
 #define Shift rm r=mrm(fetchb()); \
               y=decrm(r,w); \
 	      p=(void*)y; \
@@ -283,7 +314,7 @@ U decseg(U sr){         // decode segment register
 #define SAR z=(w?(I)(S)(US)y:(I)(C)(UC)y)>>1; RESULT
 #define ShiftCL rm r=mrm(fetchb());
 #define XLAT
-#define ESC(v)
+#define ESC(v) UC vv[7]={0}; for(int i=0; i<v; ++i) vv[i]=fetchb(); escape(vv);
 #define LOOPNZ
 #define LOOPZ
 #define LOOP
@@ -309,17 +340,18 @@ U decseg(U sr){         // decode segment register
 #define DIV  if(!y){INT0 return;} \
              if(w){d=*dx<<16|*ax; z=d/y; f=d%y; *ax=z; *dx=f;} \
              else{z=*ax/y; f=*ax%y; *al=z; *ah=f;} \
-             if(z>w?0xffff:0xff){INT0 return;}
+             if(z>(w?0xffff:0xff)){INT0 return;}
 #define IDIV if(!y){INT0 return;} \
              if(w){d=*dx<<16|*ax; z=(I)d/(S)y; f=(I)d%(S)y; *ax=z; *dx=f;} \
              else{z=(S)*ax/(UC)y; f=(S)*ax%(UC)y; *al=z; *ah=f;} \
-             if((I)z>w?0x7fff:0x7f || (I)z<w?-0x7fff:-0x7f){INT0 return;}
+             if((I)z>(w?0x7fff:0x7f) || (I)z<(w?-0x7fff:-0x7f)){INT0 return;}
 #define Grp1 rm r=mrm(fetchb()); \
              y=decrm(r,w); \
 	     p=(V*)y; \
              y=get_((void*)y,w); \
              if(trace)P("%s ",(C*[]){"TEST","NOP","NOT","NEG","MUL","IMUL","DIV","IDIV"}[r.reg]); \
              switch(r.reg){CASE 0: x=w?fetchw():fetchb(); TEST; \
+	                   CASE 1: NOP(-1); \
                            CASE 2: NOT; \
                            CASE 3: NEG; \
                            CASE 4: MUL; \
@@ -335,7 +367,8 @@ U decseg(U sr){         // decode segment register
                            CASE 3: CALL; \
                            CASE 4: *ip+=(S)y; \
                            CASE 5: /*JMP*/ *ip=get_((S*)y,1); \
-                           CASE 6: PUSH((S*)y); }
+                           CASE 6: PUSH((S*)y); \
+                           CASE 7: NOP(-2)}
 #define CLC *fl=*fl&~CF;
 #define STC *fl=*fl|CF;
 #define CLI *fl=*fl&~IF;
@@ -353,7 +386,7 @@ U decseg(U sr){         // decode segment register
 _(addbf, RM ADD)      _(addwf, RM ADD)       _(addbt,  RM ADD)     _(addwt, RM ADD)     /*00-03*/\
 _(addbi, IA ADD)      _(addwi, IA ADD)       _(pushes, PUSH(es))   _(popes, POP(es))    /*04-07*/\
 _(orbf,  RM OR)       _(orwf,  RM OR)        _(orbt,   RM OR)      _(orwt,  RM OR)      /*08-0b*/\
-_(orbi,  IA OR)       _(orwi,  IA OR)        _(pushcs, PUSH(cs))   _(nop0, NOP)         /*0c-0f*/\
+_(orbi,  IA OR)       _(orwi,  IA OR)        _(pushcs, PUSH(cs))   _(nop0, NOP(0))      /*0c-0f*/\
 _(adcbf, RM ADC)      _(adcwf, RM ADC)       _(adcbt,  RM ADC)     _(adcwt, RM ADC)     /*10-13*/\
 _(adcbi, IA ADC)      _(adcwi, IA ADC)       _(pushss, PUSH(ss))   _(popss, POP(ss))    /*14-17*/\
 _(sbbbf, RM SBB)      _(sbbwf, RM SBB)       _(sbbbt,  RM SBB)     _(sbbwt, RM SBB)     /*18-1b*/\
@@ -375,18 +408,20 @@ _(pushax, PUSH(ax))   _(pushcx, PUSH(cx))    _(pushdx, PUSH(dx))   _(pushbx, PUS
 _(pushsp, PUSH(sp))   _(pushbp, PUSH(bp))    _(pushsi, PUSH(si))   _(pushdi, PUSH(di))  /*54-57*/\
 _(popax, POP(ax))     _(popcx, POP(cx))      _(popdx, POP(dx))     _(popbx, POP(bx))    /*58-5b*/\
 _(popsp, POP(sp))     _(popbp, POP(bp))      _(popsi, POP(si))     _(popdi, POP(di))    /*5c-5f*/\
-_(nop1,NOP)_(nop2,NOP)_(nop3,NOP)_(nop4,NOP)_(nop5,NOP)_(nop6,NOP)_(nop7,NOP)_(nop8,NOP)/*60-67*/\
-_(nop9,NOP)_(nopA,NOP)_(nopB,NOP)_(nopC,NOP)_(nopD,NOP)_(nopE,NOP)_(nopF,NOP)_(nopG,NOP)/*68-6f*/\
+_(nop1,NOP(1))        _(nop2,NOP(2))         _(nop3,NOP(3))        _(nop4,NOP(4))       /*60=63*/\
+_(nop5,NOP(5))        _(nop6,NOP(6))         _(nop7,NOP(7))        _(nop8,NOP(8))       /*64-67*/\
+_(nop9,NOP(9))        _(nopA,NOP(A))         _(nopB,NOP(B))        _(nopC,NOP(C))       /*68-6b*/\
+_(nopD,NOP(D))        _(nopE,NOP(E))         _(nopF,NOP(F))        _(nopG,NOP(G))       /*68-6f*/\
 _(jo, J(of))          _(jno, JN(of))         _(jb, J(cf))          _(jnb, JN(cf))       /*70-73*/\
 _(jz, J(zf))          _(jnz, JN(zf))         _(jbe, J(cf|zf))      _(jnbe, JN(cf|zf))   /*74-77*/\
 _(js, J(sf))          _(jns, JN(sf))         _(jp, J(pf))          _(jnp, JN(pf))       /*78-7b*/\
-_(jl, J(sf^of))       _(jnl_, JN(sf^of))     _(jle, J((sf^of)|zf)) _(jnle,JN((sf^of)|zf))/*7c-7f*/\
+_(jl, J(sf^of))       _(jnl_, JN(sf^of))     _(jle, J((sf^of)|zf))_(jnle,JN((sf^of)|zf))/*7c-7f*/\
 \
 _(immb, IMM(,))       _(immw, IMM(,))        _(immb1, IMM(,))      _(immis, IMMIS)      /*80-83*/\
 _(testb, RM TEST)     _(testw, RM TEST)      _(xchgb, RMP XCHG)    _(xchgw, RMP XCHG)   /*84-87*/\
 _(movbf, RM MOV)      _(movwf, RM MOV)       _(movbt, RM MOV)      _(movwt, RM MOV)     /*88-8b*/\
 _(movsegf, MOVSEG)    _(lea, LEA)            _(movsegt, MOVSEG)  _(poprm,RM POP((US*)p))/*8c-8f*/\
-_(nopH, NOP)          _(xchgac, AXCH(cx))    _(xchgad, AXCH(dx))   _(xchgab, AXCH(bx))  /*90-93*/\
+_(nopH, NOP(H))       _(xchgac, AXCH(cx))    _(xchgad, AXCH(dx))   _(xchgab, AXCH(bx))  /*90-93*/\
 _(xchgasp, AXCH(sp))  _(xchabp, AXCH(bp))    _(xchgasi, AXCH(si))  _(xchadi, AXCH(di))  /*94-97*/\
 _(cbw, CBW)           _(cwd, CWD)            _(farcall, FARCALL)   _(wait, WAIT)        /*98-9b*/\
 _(pushf, PUSHF)       _(popf, POPF)          _(sahf, SAHF)         _(lahf, LAHF)        /*9c-9f*/\
@@ -399,19 +434,19 @@ _(movahi, iMOVb(ah))  _(movchi, iMOVb(ch))   _(movdhi, iMOVb(dh))  _(movbhi, iMO
 _(movaxi, iMOVw(ax))  _(movcxi, iMOVw(cx))   _(movdxi, iMOVw(dx))  _(movbxi, iMOVw(bx)) /*b8-bb*/\
 _(movspi, iMOVw(sp))  _(movbpi, iMOVw(bp))   _(movsii, iMOVw(si))  _(movdii, iMOVw(di)) /*bc-bf*/\
 \
-_(nopI, NOP)          _(nopJ, NOP)           _(reti, RET(fetchw())) _(retz, RET(0))     /*c0-c3*/\
+_(nopI, NOP(I))       _(nopJ, NOP(J))        _(reti, RET(fetchw())) _(retz, RET(0))     /*c0-c3*/\
 _(les, LES)           _(lds, LDS)            _(movimb, RMP iMOVm)  _(movimw, RMP iMOVm) /*c4-c7*/\
-_(nopK, NOP)          _(nopL, NOP)           _(freti, fRET(fetchw())) _(fretz, fRET(0)) /*c8-cb*/\
+_(nopK, NOP(K))       _(nopL, NOP(P))        _(freti, fRET(fetchw())) _(fretz, fRET(0)) /*c8-cb*/\
 _(int3, INT(3))       _(inti, INT(fetchb())) _(int0, INT(0))       _(iret, IRET)        /*cc-cf*/\
 _(shiftb, Shift)      _(shiftw, Shift)       _(shiftbv, ShiftCL)   _(shiftwv, ShiftCL)  /*d0-d3*/\
-_(aam, AAM)           _(aad, AAD)            _(nopM, NOP)          _(xlat, XLAT)        /*d4-d7*/\
+_(aam, AAM)           _(aad, AAD)            _(nopM, NOP(M))       _(xlat, XLAT)        /*d4-d7*/\
 _(esc0, ESC(0))       _(esc1, ESC(1))        _(esc2, ESC(2))       _(esc3, ESC(3))      /*d8-db*/\
 _(esc4, ESC(4))       _(esc5, ESC(5))        _(esc6, ESC(6))       _(esc7, ESC(7))      /*dc-df*/\
 _(loopnz, LOOPNZ)     _(loopz, LOOPZ)        _(loop, LOOP)         _(jcxz, JCXZ)        /*e0-e3*/\
 _(inb, IN)            _(inw, IN)             _(outb, OUT)          _(outw, OUT)         /*e4-e7*/\
 _(call, w=1; CALL)    _(jmp, JMP)            _(farjmp, FARJMP)     _(sjmp, sJMP)        /*e8-eb*/\
 _(invb, INv)          _(invw, INv)           _(outvb, OUTv)        _(outvw, OUTv)       /*ec-ef*/\
-_(lock, LOCK)         _(nopN, NOP)           _(rep, REP)           _(repz, REPZ)        /*f0-f3*/\
+_(lock, LOCK)         _(nopN, NOP(N))        _(rep, REP)           _(repz, REPZ)        /*f0-f3*/\
 _(hlt, HLT)           _(cmc, CMC)            _(grp1b, Grp1)        _(grp1w, Grp1)       /*f4-f7*/\
 _(clc, CLC)           _(stc, STC)            _(cli, CLI)           _(sti, STI)          /*f8-fb*/\
 _(cld, CLD)           _(std, STD)            _(grp2b, Grp2)        _(grp2w, Grp2)       /*fc-ff*/
@@ -459,13 +494,15 @@ I load(C*f){struct stat s; FILE*fp;     // load a file into memory at address ze
         && fstat(fileno(fp),&s) || fread(mem,s.st_size,1,fp); }
 
 #include "forth3.h"
+#include "bios.h"
 
 I main(I c,C**v){
     init();
     if(c>1){            // if there's an argument
         load(v[1]);     //     load named file
     }else{
-        forth( mem, mem + (*ip=0x100) );
+        bios( mem );
+        forth( mem, mem + (*ip=0x400) );
     }
     *sp=0xF000;          // initialize stack pointer
     if(debug) dbg();    // if debugging, debug

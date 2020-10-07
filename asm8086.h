@@ -80,3 +80,5 @@
 #define MOVI(r,a) 0xb8+r,LITTLEENDIAN(a)
 #define MOVBI(r,a) 0xb0+r,a
 #define CALL      0xE8
+#define ESC(v)    0xd8+v
+#define IRET      0xcf

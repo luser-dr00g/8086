@@ -59,3 +59,5 @@
 #undef INT
 #undef MOVAXI
 #undef CALL
+#undef ESC
+#undef IRET
