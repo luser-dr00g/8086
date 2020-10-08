@@ -67,36 +67,20 @@ UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); inc(ip);
              if(trace)P("%02llx(%03llo) ",(long long)x,(long long)x); R x; }
 US fetchw(){I w=fetchb();R w|(fetchb()<<8);}
 
-void interrupt( UC no ){
-  switch(no){
-  CASE 0x00: printf("div by zero trap\n");
-  CASE 0x15: trace = trace  ? 0  : 1;
-  CASE 0x21: switch(bget(ah)){
-             CASE 0x01: bput(al, getchar());
-             CASE 0x02: fputs( cp437tounicode( bget(dl) ), stdout );
-                        //putchar(bget(dl)); fflush(stdout);
-                        bput(al,bget(dl)); if(bget(al)=='\t')bput(al,' ');
-	     CASE 0x09: f=wget(dx); while(mem[f]!='$')putchar(mem[f++]); bput(al,'$');
-	     CASE 0x2A: {time_t t=time(NULL);struct tm*tm=localtime(&t);
-	                 wput(cx,tm->tm_year);
-                         wput(dh,tm->tm_mon);
-                         wput(dl,tm->tm_mday);
-                         wput(al,tm->tm_wday);}
-	     CASE 0x2C: {struct timeval tv;gettimeofday(&tv,0);
-                         time_t t=time(NULL);struct tm*tm=localtime(&t);
-                         bput(ch,tm->tm_hour);
-                         bput(cl,tm->tm_min);
-                         bput(dh,tm->tm_sec);
-                         bput(dl,tv.tv_usec/10);}
-	     CASE 0x4C: exit(bget(al));
-             }}}
-
 void escape( UC vv[7] ){
   if(trace)P( "%" PRIxPTR " ", (U)vv[0] );
   switch( vv[0] ){
   CASE 0x00: printf("div by zero trap\n"); P("ip:%" PRIxPTR, (U)wget(mem+*sp)); dump();
+  CASE 0x10: switch(bget(ah)){ //video
+             CASE 0x0E: x = bget(al);
+                        strchr("\n\07\08\015", x)  ? fputc( x, stdout )
+                                                : fputs( cp437tounicode( x ), stdout );
+             }
   CASE 0x15: trace = 1 - trace;
-  CASE 0x21: switch(bget(ah)){
+  CASE 0x16: switch(bget(ah)){ //keyboard
+             CASE 0x00: bput(al, fgetc(stdin));
+             }
+  CASE 0x21: switch(bget(ah)){ //dos
              CASE 0x01: bput(al, fgetc(stdin));
              CASE 0x02: fputs( cp437tounicode( bget(dl) ), stdout );
                         bput(al,bget(dl)); if(bget(al)=='\t')bput(al,' ');
@@ -285,12 +269,12 @@ U decseg(U sr){         // decode segment register
 #define LDS
 #define iMOVm if(w){iMOVw((US*)y)}else{iMOVb((UC*)y)}
 #define fRET(v) POP(cs); RET(v)
-#define INT(v) f = wget(mem+4*v); PUSH(fl); PUSH(cs); PUSH(ip); \
-               /**cs = wget(mem+4*v+2);*/ \
+#define INT(v) f = wget(mem+4*(x=v)); PUSH(fl); PUSH(cs); PUSH(ip); \
+               *cs = wget(mem+4*x+2); \
                *ip = f; \
                if(trace)P("ip=%" PRIxPTR " ",(U)*ip);
-#define INT0   INT(0) //div by zero trap
-#define IRET POP(ip); POP(cs); POP(fl);
+#define INT0   INT(0)
+#define IRET   POP(ip); POP(cs); POP(fl);
 #define Shift rm r=mrm(fetchb()); \
               y=decrm(r,w); \
 	      p=(void*)y; \
@@ -437,7 +421,7 @@ _(movspi, iMOVw(sp))  _(movbpi, iMOVw(bp))   _(movsii, iMOVw(si))  _(movdii, iMO
 _(nopI, NOP(I))       _(nopJ, NOP(J))        _(reti, RET(fetchw())) _(retz, RET(0))     /*c0-c3*/\
 _(les, LES)           _(lds, LDS)            _(movimb, RMP iMOVm)  _(movimw, RMP iMOVm) /*c4-c7*/\
 _(nopK, NOP(K))       _(nopL, NOP(P))        _(freti, fRET(fetchw())) _(fretz, fRET(0)) /*c8-cb*/\
-_(int3, INT(3))       _(inti, INT(fetchb())) _(int0, INT(0))       _(iret, IRET)        /*cc-cf*/\
+_(int3, INT(3))       _(inti, INT(fetchb())) _(int0, INT0)         _(iret, IRET)        /*cc-cf*/\
 _(shiftb, Shift)      _(shiftw, Shift)       _(shiftbv, ShiftCL)   _(shiftwv, ShiftCL)  /*d0-d3*/\
 _(aam, AAM)           _(aad, AAD)            _(nopM, NOP(M))       _(xlat, XLAT)        /*d4-d7*/\
 _(esc0, ESC(0))       _(esc1, ESC(1))        _(esc2, ESC(2))       _(esc3, ESC(3))      /*d8-db*/\

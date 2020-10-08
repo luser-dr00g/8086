@@ -38,8 +38,10 @@ CODE(pop,    pop,      POP(BX),  MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX),
 
 CODE(execute,execute,  POP(BX), MOV(,R,AX,BX), MOV(,B,BX,BX_),0, JMP_(R,BX))
 CODE(exit,   c_exit,   POPRSP(SI)) // all WORD()s end with c_exit
-CODE(emit,   emit,     POP(DX), MOVI(AX,0x0200), INT(21))
-CODE(key,    key,      MOVI(AX,0x0100), INT(21), XOR(,R,BX,BX), MOV(BYTE,R,BL,AL), PUSH(BX))
+//CODE(emit,   emit,     POP(DX), MOVI(AX,0x0200), INT(21))
+//CODE(key,    key,      MOVI(AX,0x0100), INT(21), XOR(,R,BX,BX), MOV(BYTE,R,BL,AL), PUSH(BX))
+CODE(emit,   emit,     POP(AX), MOVBI(AH,0x0E), INT(10))
+CODE(key,    key,      MOVI(AX,0), INT(16), XOR(BYTE,R,AH,AH), PUSH(AX))
 CODE(0branch,zbranch,  POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JNZ,2, ADD(,R,SI,AX))
 CODE(branch, branch,   LODS, SHL(R,AX), ADD(,R,SI,AX))
 CODE(1branch,onbranch, POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JZ, 2, ADD(,R,SI,AX))

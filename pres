@@ -151,6 +151,13 @@ I simply haven't written any significant amount of Forth code per se.
 The modest milestone for this interpreter will be implementing the 79
 standard. Then I'll assess and decide what to do further.
 
+A.K. wrote:
+> Once you're there change/add some words to make the kernel ISO-Forth like
+> (Forth-79 is not too much different from Forth-94) and run Hayes' core tester.
+
+> Then you'll have a sound foundation for further development.
+
+
 Incidentally, the current draft outline is here, including all the
 blurbs and thoughts leading up to and including the discussion
 cribbed from this thread (in order to be ever so much more
@@ -382,10 +389,6 @@ Interrupts
 
 interface to the BIOS (basic input/output system)
 
-Does not currently use the standard interrupt vector
-and microcode. So the whole address space is available
-to the application.
-
 implemented with help from stackExchange
 https://retrocomputing.stackexchange.com/q/6610/509
 
@@ -549,6 +552,9 @@ Compiling COLON definitions
 
  colon
    create  lit smudged !flags  !name !colon link! ]
+
+ create
+   here lit {sizeof(word_entry)} allot !link
    
  semi
    [compile] exit
@@ -626,6 +632,7 @@ in-memory screens and DOS interface to disk files.
 Dual-XT system for separate interpret/compile behaviors.
 https://groups.google.com/d/topic/comp.lang.forth/GyzL0wIENUw/discussion
 
+Build some application in Forth that runs on top of all this.
 
 
 
