@@ -38,16 +38,16 @@ https://github.com/luser-dr00g/8086
  to talk about because it's very short.
 
 https://github.com/luser-dr00g/8086
-$ make count
-wc a8086.c asm8086.h fdict.h forth3.h undefs.h cp437.h
-  465  2233 21671 a8086.c
-   86   269  2589 asm8086.h
-  104   468  3024 fdict.h
-  479  2260 25588 forth3.h
-   61   122   875 undefs.h
-   47   200  1988 cp437.h
- 1242  5552 55735 total
- 
+    $ make count
+    wc a8086.c asm8086.h fdict.h forth3.h undefs.h cp437.h
+    465  2233 21671 a8086.c
+    86   269  2589 asm8086.h
+    104   468  3024 fdict.h
+    479  2260 25588 forth3.h
+    61   122   875 undefs.h
+    47   200  1988 cp437.h
+    1242  5552 55735 total
+
 I haven't really thought through any of the details.  I could do an
 overview of the whole process: lexing, parsing, IR, execution. And
 supplement with specific examples.  If it's concentrated on the Forth
@@ -80,11 +80,16 @@ to a group of a dozen undergrads?
     * Reverse Polish notation
     * * Forth:
     * Byte code interpreter.
+    * Runtime support functions.
 
-    X-Macros. --aggressive factoring into a CPP DSL
+    X-Macros.
+    --aggressive factoring into a CPP DSL
 
-    The 8086 machine instructions
+    The 8086 machine
+    * Opcode format
+    * Execution of the emulator
     * Interrupts
+    * Bridge to Higher Level
 
     Forth language
     * Forth internals
@@ -93,6 +98,7 @@ to a group of a dozen undergrads?
     * Defining CODE words and WORD words in the Forth dictionary.
     * Text Interpreter
     * boot code
+    * Constants and Variables as alternatives to ENTER.
     * * Compiling colon definitions.
     * * Compiling control structures.
 
@@ -202,7 +208,7 @@ text input
 lexing (lexical analysis)
     |
     V
-parsing (syntactical analysis
+parsing (syntactical analysis)
     |
     V
 IR (intermediate representation)        (Compiler)
@@ -222,7 +228,7 @@ Syntactical analysis
 assembles a parse tree data structure representing the 
 "sentence structure of the language": functions, declarations,
 type designators, statements, expressions.
-  [push-down automaton]
+     [push-down automaton]
 
 
 
@@ -395,15 +401,24 @@ https://retrocomputing.stackexchange.com/q/6610/509
 So far, only these interrupts are implemented.
 0x
 0 : div by zero
+10: video functions
+  AH=0E: write character tty
 15: toggle cpu trace
+16: keyboard
+  AH=00: read character
 21: DOS functions
   AH=01: read character AL
-     02: write character AL
+     02: write character DL
      09: write string (DX)..$
      2A: get date
      2C: get time
      4C: exit program
+     
+initial implementation was just a function void interrupt( int no );
+reworked to use ESC instruction* within interrupt functions
+called through the standard interrupt vector.
 
+* ESC instruction now has a nonstandard behavior
 
 
 
@@ -468,7 +483,7 @@ Subroutine calls using ENTER EXIT and return stack.
         the NEXT which ends this coce word jumps to the next address after the subr call
 
 next:
-    ax = *((si+=2)-2);
+    ax = *si++++;
     bx = ax;
     bx = *bx;
     goto *bx;
@@ -623,8 +638,6 @@ DO I LEAVE LOOP
 Future Work.
 
 Implementing more 8086 instructions like REP and LOOP.
-
-Implement interrupt vector table and access host functions through nop opcodes.
 
 Further implementation of Forth 79 standard to read code from
 in-memory screens and DOS interface to disk files.
