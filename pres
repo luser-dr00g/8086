@@ -195,6 +195,15 @@ Anton Ertl wrote:
 > And then you better show that this has advantages beyond making the
 > compiler writer's life easier:-)
 
+Any hints for how to do this part? What's the "Killer App" for RPN code?
+
+Anton Ertl wrote:
+> Forth is not primarily about RPN.
+
+> To show the advantages I present
+> <http://www.euroforth.org/ef99/ertl99.pdf>, which shows that Forth can
+> have source code that's a lot smaller, and identifies various factors
+> for that.
 ...
 
 
