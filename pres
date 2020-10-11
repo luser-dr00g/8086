@@ -269,6 +269,11 @@ Forth removes much of the complexity of lexing and parsing by
 delimiting all tokens by spaces and using reverse polish notation that
 requires no sentence structure per se.
 
+Create new procedures by compiling Forth code into a new dictionary
+definition. Control structures provide sentence structure but
+are compiled piece by piece when encountered sequentially.
+
+
 So the top level interpreter design becomes
 
 text input
