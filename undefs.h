@@ -39,6 +39,8 @@
 #undef JMP_
 #undef SHL
 #undef SHR
+#undef INC
+#undef DEC
 #undef POP
 #undef PUSH
 #undef ADDAX
@@ -55,6 +57,8 @@
 #undef CWD
 #undef CLD
 #undef STD
+#undef CLI
+#undef STI
 #undef HALT
 #undef INT
 #undef MOVAXI

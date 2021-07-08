@@ -53,9 +53,12 @@
 #define INC_(m,  r_m) 0xff,MRM(m,0,r_m)
 #define DEC_(m,  r_m) 0xff,MRM(m,1,r_m)
 #define JMP_(m,  r_m) 0xff,MRM(m,5,r_m)
+#define INC(r)    0x40+r
+#define DEC(r)    0x48+r
 #define PUSH(r)   0x50+r
 #define POP(r)    0x58+r
-#define ADDAX     0x05
+#define ADDAX(imm) 0x05,LITTLEENDIAN(imm)
+#define SUBAX(imm) 0x2d,LITTLEENDIAN(imm)
 #define MOVS      0xa5
 #define CMPS      0xa7
 #define LODS      0xad
@@ -75,6 +78,10 @@
 #define CWD       0x99
 #define CLD       0xfc
 #define STD       0xfd
+#define UP        CLD
+#define DOWN      STD
+#define STI       0xfb
+#define CLI       0xfa
 #define INT(no)   0xCD,0x##no
 #define LITTLEENDIAN(w) (w)%0x100,(w)/0x100
 #define MOVI(r,a) 0xb8+r,LITTLEENDIAN(a)

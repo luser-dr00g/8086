@@ -1,15 +1,27 @@
 #include "asm8086.h"
 #include "fdict.h"
+
 /*	 W   = AX     PSP = SP
 	 X   = BX     RSP = BP
 	 IP  = SI     TOS_in_memory              */
 // all HEADLESS and CODE entries end with NEXT
-#define NEXT       	LODS, MOV(,R,BX,AX), MOV(,Z,BX,BX_), JMP_(R,BX)
+
+#define _NEXT       	LODS, MOV(,R,BX,AX), MOV(,Z,BX,BX_), JMP_(R,BX)
+#define TNEXT 		LODS, PUSH(AX), 						 \
+              		/*MOV(,R,BX,AX), MOV(,Z,AX,BX_),*/				 \
+              		MOV(,R,AX,SI), 							 \
+              		SUBAX(MAX_NAME), MOV(,R,DX,AX),					 \
+              		/*DEC(AX), MOV(,R,BX,AX), MOV(BYTE,Z,CL,BX_), XOR(BYTE,R,CH,CH),*/ \
+              		MOVI(CX,1), 							 \
+              		MOVI(AX,0x4000), MOVI(BX,1), INT(21),				 \
+                        POP(AX), MOV(,R,BX,AX), MOV(,Z,BX,BX_), JMP_(R,BX)
+#define NEXT _NEXT
+
 #define PUSHRSP(r) 	LEA(,B,BP,BP_),minus(4), MOV(F,B,r,BP_),0
 #define POPRSP(r)  	MOV(,B,r,BP_),0, LEA(,B,BP,BP_),4
 #define minus(x)	1+(0xff^x)
-#define JMPAX( addr )   MOVI(AX,addr), JMP_(R,AX)
-#define PUSHAX( val )   MOVI(AX,val), PUSH(AX)
+#define JMPAX(addr)     MOVI(AX,addr), JMP_(R,AX)
+#define PUSHAX(val)     MOVI(AX,val), PUSH(AX)
 
 static inline void nop_(){}
 
@@ -19,12 +31,13 @@ char *p = start;
 unsigned link = 0;
 enum flag { immediate = 1, smudged = 2 };
 unsigned flags = 0;
-trace=0;
-{ UC x[] = { HALT, 00, 00 };
+trace=1;
+{ UC x[] = { HALT, 00, 00, 00, 00 };
   memcpy( p, x, sizeof x );
   p += 0x100; } //boot code and return stack area. stack pointer assumed well out of the way
 
-HEADLESS(enter, enter, PUSHRSP(SI), ADDAX,2,0, MOV(,R,SI,AX)) // begin high level WORD
+p += 2; //some wiggle room
+HEADLESS(enter, enter, PUSHRSP(SI), ADDAX(2), MOV(,R,SI,AX)) // begin high level WORD
 HEADLESS(docon, docon, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dovar, dovar, MOV(,R,BX,AX), LEA(,B,AX,BX_),2, PUSH(AX))
 HEADLESS(dostr, dostr, MOV(,R,BX,AX), MOV(,B,AX,BX_),2, MOV(,B,CX,BX_),4, PUSH(AX),PUSH(CX))
@@ -480,6 +493,6 @@ p = mem + 0xC000;
 memcpy( p, src, sizeof src );
 
 if(trace){P("\n");}
-trace=0;
+trace=1;
 return  0;}
 

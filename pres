@@ -254,7 +254,7 @@ Soon after applied to computers in the 50s.
 https://stackoverflow.com/questions/22366141/how-to-understand-the-f-function-in-burks-warren-wrights-lukasiewicz-logic-mach
 
 executing a prefix language requires a hidden runtime stack.
-eg. the Logo language, a Lisp without parens.
+eg. the Logo language: a Lisp without parens.
 
 executing an infix language with precedence can require
 - two stacks, eg. the Shunting Yard algorithm, APL algorithm

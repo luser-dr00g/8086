@@ -45,9 +45,6 @@ struct word_entry {
     memcpy( p, &x, sizeof x ); 					\
     if(trace)printf("%s:%x ", #e, e);				\
     p += sizeof x; 						\
-    /*US code = P_PARAM_PTR;*/					\
-    /*memcpy( p, &code, sizeof code };*/			\
-    /*p += sizeof(US);*/					\
     UC params[] = { __VA_ARGS__ , NEXT };			\
     memcpy( p, params, sizeof params );				\
     p += sizeof params;						\

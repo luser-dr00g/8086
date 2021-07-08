@@ -21,7 +21,7 @@ T signed char C; T unsigned char UC; T void V;  // to make everything shorter
 U o,w,d,f; // opcode, width, direction, extra temp variable (was for a flag, hence f)
 U x,y,z;   // left operand, right operand, result
 void *p;   // location to receive result
-UC halt,debug=0,trace=0,reg[28],null[2],mem[0x100000]={ // operating flags, register memory, RAM
+UC halt,debug=0,trace=1,reg[28],null[2],mem[0x100000]={ // operating flags, register memory, RAM
     1, (3<<6),        // ADD ax,ax
     1, (3<<6)+(4<<3), // ADD ax,sp
     3, (3<<6)+(4<<3), // ADD sp,ax
@@ -47,12 +47,6 @@ V dump(){ //H(HP)P("\n");
     P("\n");  // ^^^ crack flag bits into strings ^^^
 }
 
-U segment(US *seg, US *adr){ R  ((U)*seg << 4) | *adr; }
-U cs_(US *adr){ R  segment( cs, adr ); }
-U ds_(US *adr){ R  segment( ds, adr ); }
-U ss_(US *adr){ R  segment( ss, adr ); }
-U es_(US *adr){ R  segment( es, adr ); }
-
 // get and put into memory in a strictly little-endian format
 I get_(void*p,U w){UC*c=p;R c[0]|(w?c[1]<<8:0);}
 V put_(void*p,U x,U w){UC*c=p;c[0]=x;if(w)c[1]=x>>8;}
@@ -60,46 +54,31 @@ I bget(void*p){ R get_(p, 0); }
 I wget(void*p){ R get_(p, 1); }
 V bput(void*p,U x){ put_(p, x, 0); }
 V wput(void*p,U x){ put_(p, x, 1); }
+U qget(void*p, void*q){ R ( wget(p) << 16 ) | wget(q); };
+U qput(void*p, void*q, U x){ R wput(p, x>>16), wput(q, x&0xffff), x; };
+
+U segment(US *seg, US *adr){ R  ((U)wget(seg) << 4) | wget(adr); }
+U cs_(US *adr){ R  segment( cs, adr ); }
+U ds_(US *adr){ R  segment( ds, adr ); }
+U ss_(US *adr){ R  segment( ss, adr ); }
+U es_(US *adr){ R  segment( es, adr ); }
 
 // get byte or word through cs:ip, incrementing ip
-U inc(US*p){ wput( p, 1 + wget( p ) ); }
+U inc(US*p){ U x; wput( p, x = 1 + wget( p ) ); R x; }
 UC fetchb(){ U x = get_( mem + cs_(ip), 0 ); inc(ip);
-             if(trace)P("%02llx(%03llo) ",(long long)x,(long long)x); R x; }
+             if(trace>1)P("%02llx(%03llo) ",(long long)x,(long long)x); R x; }
 US fetchw(){I w=fetchb();R w|(fetchb()<<8);}
 
+static int bios( UC vv[7] );
+static int dos( UC vv[7] );
 void escape( UC vv[7] ){
-  if(trace)P( "%" PRIxPTR " ", (U)vv[0] );
+  if(trace>1)P( "%" PRIxPTR " ", (U)vv[0] );
   switch( vv[0] ){
-  CASE 0x00: printf("div by zero trap\n"); P("ip:%" PRIxPTR, (U)wget(mem+*sp)); dump();
-  CASE 0x10: switch(bget(ah)){ //video
-             CASE 0x0E: x = bget(al);
-                        strchr("\n\07\08\015", x)  ? fputc( x, stdout )
-                                                : fputs( cp437tounicode( x ), stdout );
-             }
-  CASE 0x15: trace = 1 - trace;
-  CASE 0x16: switch(bget(ah)){ //keyboard
-             CASE 0x00: bput(al, fgetc(stdin));
-             }
-  CASE 0x21: switch(bget(ah)){ //dos
-             CASE 0x01: bput(al, fgetc(stdin));
-             CASE 0x02: fputs( cp437tounicode( bget(dl) ), stdout );
-                        bput(al,bget(dl)); if(bget(al)=='\t')bput(al,' ');
-	     CASE 0x09: f=wget(dx);
-                        while(mem[f]!='$')fputs( cp437tounicode( mem[f++] ), stdout );
-                        bput(al,'$');
-	     CASE 0x2A: {time_t t=time(NULL);struct tm*tm=localtime(&t);
-	                 wput(cx,tm->tm_year);
-                         wput(dh,tm->tm_mon);
-                         wput(dl,tm->tm_mday);
-                         wput(al,tm->tm_wday);}
-	     CASE 0x2C: {struct timeval tv;gettimeofday(&tv,0);
-                         time_t t=time(NULL);struct tm*tm=localtime(&t);
-                         bput(ch,tm->tm_hour);
-                         bput(cl,tm->tm_min);
-                         bput(dh,tm->tm_sec);
-                         bput(dl,tv.tv_usec/10);}
-	     CASE 0x4C: exit(bget(al));
-             }
+  case 0x00:
+  case 0x10:
+  case 0x15:
+  case 0x16: bios( vv );
+  CASE 0x21: dos( vv );
   }
 }
 
@@ -123,7 +102,7 @@ U decseg(U sr){         // decode segment register
 
 // opcode helpers
     // set d and w from o
-#define DW  if(trace){ P("%s: ",__func__); } \
+#define DW  if(trace>1){ P("%s: ",__func__); } \
             d=!!(o&2); \
             w=o&1;
     // fetch mrm byte and decode, setting x and y as pointers to args and p ptr to dest
@@ -138,7 +117,7 @@ U decseg(U sr){         // decode segment register
 #define LDXY \
             x=get_((void*)x,w); \
             y=get_((void*)y,w); \
-            if(trace){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); }
+            if(trace>1){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); }
 
     // normal mrm decode and load
 #define RM  RMP LDXY
@@ -174,7 +153,7 @@ U decseg(U sr){         // decode segment register
 
     // store result to p ptr
 #define RESULT \
-        if(trace)P(w?"->%04llx ":"->%02llx ", (long long)z); \
+        if(trace>1)P(w?"->%04llx ":"->%02llx ", (long long)z); \
         put_(p,z,w);
 
 // operators, composed with helpers in the opcode table below
@@ -204,7 +183,7 @@ U decseg(U sr){         // decode segment register
 #define AAM f=fetchb();{I tal=*al;*ah=tal/f;*al=tal%f;} LOGFLAGS SETPF
 #define AAD f=fetchb();{I tal=*al,tah=*ah;*al=(tal+tah*f)&0xff;*ah=0;} LOGFLAGS SETPF
 #define J(c) U cf=F(CF),pf=F(PF),of=F(OF),sf=F(SF),zf=F(ZF); y=(S)(C)fetchb(); \
-                  if(trace)P("<%d> ", c); \
+                  if(trace>1)P("<%d> ", c); \
                   if(c)*ip+=(S)y;
 #define JN(c) J(!(c))
 #define IMM(a,b) rm r=mrm(fetchb()); \
@@ -214,8 +193,8 @@ U decseg(U sr){         // decode segment register
             b \
             d=0; \
             y=get_((void*)y,w); \
-            if(trace){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); } \
-            if(trace){ \
+            if(trace>1){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); } \
+            if(trace>1){ \
                 P("%s ", \
                   (C*[]){"ADD","OR","ADC","SBB","AND","SUB","XOR","CMP"}[r.reg]); } \
             switch(r.reg){CASE 0:ADD \
@@ -252,7 +231,7 @@ U decseg(U sr){         // decode segment register
 #define MOVS put_(mem+wget(di),get_(mem+wget(si),w),w); \
              d=!!(*fl&DF); *di+=Offset; *si+=Offset;
 #define CMPS x=(U)(mem+wget(si)); y=(U)(mem+wget(di));\
-             if(trace){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); } \
+             if(trace>1){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); } \
              LDXY CMP \
              d=!!(*fl&DF); *di+=Offset; *si+=Offset;
 #define STOS put_(di,w?*ax:*al,w); \
@@ -272,14 +251,14 @@ U decseg(U sr){         // decode segment register
 #define INT(v) f = wget(mem+4*(x=v)); PUSH(fl); PUSH(cs); PUSH(ip); \
                *cs = wget(mem+4*x+2); \
                *ip = f; \
-               if(trace)P("ip=%" PRIxPTR " ",(U)*ip);
+               if(trace>1)P("ip=%" PRIxPTR " ",(U)*ip);
 #define INT0   INT(0)
 #define IRET   POP(ip); POP(cs); POP(fl);
 #define Shift rm r=mrm(fetchb()); \
               y=decrm(r,w); \
 	      p=(void*)y; \
               y=get_((void*)y,w); \
-	      if (trace)P("%s ", (C*[]){"ROL","ROR","RCL","RCR","SHL","SHR","SAR"}[r.reg]); \
+	      if (trace>1)P("%s ", (C*[]){"ROL","ROR","RCL","RCR","SHL","SHR","SAR"}[r.reg]); \
               switch(r.reg){ \
 	      CASE 0: ROL ; \
               CASE 1: ROR ; \
@@ -313,7 +292,7 @@ U decseg(U sr){         // decode segment register
 #define LOCK
 #define REP
 #define REPZ
-#define HLT if(trace)P("HALT\n"); halt=1
+#define HLT if(trace>1)P("HALT\n"); halt=1
 #define CMC *fl=(*fl^CF);
 #define NOT  z=~y; RESULT
 #define NEG  z=w?-(S)y:-(C)y; RESULT
@@ -333,7 +312,7 @@ U decseg(U sr){         // decode segment register
              y=decrm(r,w); \
 	     p=(V*)y; \
              y=get_((void*)y,w); \
-             if(trace)P("%s ",(C*[]){"TEST","NOP","NOT","NEG","MUL","IMUL","DIV","IDIV"}[r.reg]); \
+             if(trace>1)P("%s ",(C*[]){"TEST","NOP","NOT","NEG","MUL","IMUL","DIV","IDIV"}[r.reg]); \
              switch(r.reg){CASE 0: x=w?fetchw():fetchb(); TEST; \
 	                   CASE 1: NOP(-1); \
                            CASE 2: NOT; \
@@ -344,7 +323,7 @@ U decseg(U sr){         // decode segment register
                            CASE 7: IDIV; }
 #define Grp2 rm r=mrm(fetchb()); \
              y=decrm(r,w); \
-             if(trace)P("%s ",(C*[]){"INC","DEC","CALL","CALL","JMP","JMP","PUSH","NOP"}[r.reg]); \
+             if(trace>1)P("%s ",(C*[]){"INC","DEC","CALL","CALL","JMP","JMP","PUSH","NOP"}[r.reg]); \
              switch(r.reg){CASE 0: INC((S*)y); \
                            CASE 1: DEC((S*)y); \
                            CASE 2: CALL; \
@@ -454,7 +433,7 @@ V video(){I i;          // dump the (cleaned) video memory to the console
 }
 
 static I ct;        // timer memory for period video dump
-V run(){while(!halt){if(trace)dump();
+V run(){while(!halt){if(trace>1)dump();
     //if(!ct--){ct=10; video();}
     tab[o=fetchb()]();}}
 V dbg(){
@@ -479,14 +458,18 @@ I load(C*f){struct stat s; FILE*fp;     // load a file into memory at address ze
 
 #include "forth3.h"
 #include "bios.h"
+#include "dos.h"
 
 I main(I c,C**v){
     init();
     if(c>1){            // if there's an argument
         load(v[1]);     //     load named file
     }else{
-        bios( mem );
-        forth( mem, mem + (*ip=0x400) );
+        load_bios( mem ); //0000-03FF F000-F0FF
+	puts("bios");
+	load_dos( mem );  //0400-05FF
+	puts("dos");
+        forth( mem, mem + (*ip=0x600) );
     }
     *sp=0xF000;          // initialize stack pointer
     if(debug) dbg();    // if debugging, debug

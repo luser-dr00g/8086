@@ -1,5 +1,6 @@
 #CFLAGS+= -Os
-SRC=a8086.c asm8086.h fdict.h forth3.h undefs.h cp437.h bios.h
+CFLAGS=-Wno-incompatible-pointer-types
+SRC=a8086.c asm8086.h fdict.h forth3.h undefs.h cp437.h bios.h dos.h
 
 a8086:$(SRC)
 	$(CC) $(CFLAGS) -o $@ $< $(LDLIBS)
