@@ -336,8 +336,8 @@ My favorite C trick.
 Generate an enum and a string table from a single list.
 
 #define LIST(X) X(ZERO) X(ONE) X(TWO) X(THREE) X(FOUR)
-#define ENUM(X) X ,
-#define STR(X) # X ,
+#define ENUM(Y) Y ,
+#define STR(Y) # Y ,
 enum numbers { LIST(ENUM) };
 char *names[] = { LIST(STR) };
 
