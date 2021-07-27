@@ -59,6 +59,7 @@
 #define POP(r)    0x58+r
 #define ADDAX(imm) 0x05,LITTLEENDIAN(imm)
 #define SUBAX(imm) 0x2d,LITTLEENDIAN(imm)
+#define ADDAL(imm) 0x04,imm
 #define MOVS      0xa5
 #define CMPS      0xa7
 #define LODS      0xad
