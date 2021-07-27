@@ -6,16 +6,19 @@
 	 IP  = SI     TOS_in_memory              */
 // all HEADLESS and CODE entries end with NEXT
 
-#define _NEXT       	LODS, MOV(,R,BX,AX), MOV(,Z,BX,BX_), JMP_(R,BX)
-#define TNEXT 		LODS, PUSH(AX), 						 \
-              		/*MOV(,R,BX,AX), MOV(,Z,AX,BX_),*/				 \
-              		MOV(,R,AX,SI), 							 \
-              		SUBAX(MAX_NAME), MOV(,R,DX,AX),					 \
-              		/*DEC(AX), MOV(,R,BX,AX), MOV(BYTE,Z,CL,BX_), XOR(BYTE,R,CH,CH),*/ \
-              		MOVI(CX,1), 							 \
-              		MOVI(AX,0x4000), MOVI(BX,1), INT(21),				 \
+#define TNEXT 		LODS, PUSH(AX), 					\
+              		SUBAX(MAX_NAME), MOV(,R,DX,AX), 			\
+              		DEC(AX),MOV(,R,BX,AX),MOV(BYTE,Z,CL,BX_),XOR(BYTE,R,CH,CH), \
+              		MOVI(AX,0x4000), MOVI(BX,1), INT(21),			\
+			MOVI(AX,0x0E00+' '), INT(10), 				\
                         POP(AX), MOV(,R,BX,AX), MOV(,Z,BX,BX_), JMP_(R,BX)
-#define NEXT _NEXT
+#define _NEXT       	LODS, MOV(,R,BX,AX), MOV(,Z,BX,BX_), JMP_(R,BX)
+
+#ifdef TRACE
+#  define NEXT TNEXT
+#else
+#  define NEXT _NEXT
+#endif
 
 #define PUSHRSP(r) 	LEA(,B,BP,BP_),minus(4), MOV(F,B,r,BP_),0
 #define POPRSP(r)  	MOV(,B,r,BP_),0, LEA(,B,BP,BP_),4
@@ -31,7 +34,7 @@ char *p = start;
 unsigned link = 0;
 enum flag { immediate = 1, smudged = 2 };
 unsigned flags = 0;
-trace=1;
+//trace=1;
 { UC x[] = { HALT, 00, 00, 00, 00 };
   memcpy( p, x, sizeof x );
   p += 0x100; } //boot code and return stack area. stack pointer assumed well out of the way
@@ -49,16 +52,37 @@ CODE(peek,   peek,     POP(BX),  MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX),
 CODE(pop,    pop,      POP(BX),  MOV(,Z,DI,BX_), SHL(R,DI), ADD(,R,DI,BX), 
                        MOV(,Z,AX,DI_), DEC_(Z,BX_), PUSH(AX))
 
-CODE(execute,execute,  POP(BX), MOV(,R,AX,BX), MOV(,B,BX,BX_),0, JMP_(R,BX))
+CODE(execute,execute,  POP(BX), MOV(,R,AX,BX), MOV(,Z,BX,BX_), JMP_(R,BX))
 CODE(exit,   c_exit,   POPRSP(SI)) // all WORD()s end with c_exit
+
 //CODE(emit,   emit,     POP(DX), MOVI(AX,0x0200), INT(21))
 //CODE(key,    key,      MOVI(AX,0x0100), INT(21), XOR(,R,BX,BX), MOV(BYTE,R,BL,AL), PUSH(BX))
 CODE(emit,   emit,     POP(AX), MOVBI(AH,0x0E), INT(10))
 CODE(key,    key,      MOVI(AX,0), INT(16), XOR(BYTE,R,AH,AH), PUSH(AX))
+
 CODE(0branch,zbranch,  POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JNZ,2, ADD(,R,SI,AX))
 CODE(branch, branch,   LODS, SHL(R,AX), ADD(,R,SI,AX))
 CODE(1branch,onbranch, POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JZ, 2, ADD(,R,SI,AX))
-CODE(lit,    lit,      LODS, PUSH(AX))
+
+#ifdef TRACE
+CODE(lit,  lit,
+     LODS, PUSH(AX), MOV(,R,BX,AX),
+     OR(,R,BX,BX), JGE,7, MOVI(AX,0x0E00+'-'), INT(10), NEG(R,BX),
+     MOV(,R,AX,BX), XOR(,R,DX,DX), MOVI(CX,10000), DIV(R,CX),
+       OR(,R,AX,AX), JZ,6,  MOVBI(AH,0x0E), ADDAL(48), INT(10),
+     MOV(,R,AX,DX), XOR(,R,DX,DX), MOVI(CX,1000), DIV(R,CX),
+       OR(,R,AX,AX), JZ,6,  MOVBI(AH,0x0E), ADDAL(48), INT(10),
+     MOV(,R,AX,DX), MOVBI(CL,100), XOR(BYTE,R,CH,CH), BYTE+DIV(R,CL),
+       MOV(BYTE,R,DL,AH),
+       OR(BYTE,R,AL,AL), JZ,6,  MOVBI(AH,0x0E), ADDAL(48), INT(10),
+     MOV(BYTE,R,AL,DL), XOR(BYTE,R,AH,AH), MOVBI(CL,10), BYTE+DIV(R,CL),
+       MOV(BYTE,R,DL,AH),
+       OR(BYTE,R,AL,AL), JZ,6,  MOVBI(AH,0x0E), ADDAL(48), INT(10),
+     MOVBI(AH,0x0E), MOV(BYTE,R,AL,DL), ADDAL(48), INT(10),
+       MOVI(AX,0x0E00+' '), INT(10) )/**/
+#else
+CODE(lit,  lit,      LODS, PUSH(AX))
+#endif
 
 CODE(dup,    dup,      POP(AX), PUSH(AX), PUSH(AX))
 CODE(2dup,   twodup,   POP(BX), POP(AX),  PUSH(AX), PUSH(BX),  PUSH(AX), PUSH(BX))
@@ -165,7 +189,6 @@ CODE((+loop), _plusloop_,//INT(15),
                            MOV(,B,BX,BP_),4, CMP(,B,BX,BP_),0, JLE, -19, //(8) jmp :2 if lim
                          LODS, SHL(R,AX), ADD(,R,SI,AX))                 // branch NEXT
                          //INT(15))
-CODE(bye,     bye,       HALT)
 CODE(trac,    trac,      INT(15))
 
 WORD(true,    true,      docon, -1)
@@ -332,8 +355,8 @@ WORD(parse,   parse,     enter, //twodup, type, space,
                                 twodrop, bl, word)
 
 WORD(warning, warning,   dovar, 0)
-WORD(errout,  errout,    enter, bye) //patched to quit later
-WORD((abort), _abort_,   enter, bye) //patched to abort later
+WORD(errout,  errout,    enter, 0) //patched to quit later
+WORD((abort), _abort_,   enter, 0) //patched to abort later
 WORD(error,   error,     enter, warning, at, zless, zbranch, 1, _abort_,
                                 lit, 'E', emit, lit, 'R', emit, lit, 'R', emit,
                                 dot, dot, dot, cr, errout)
@@ -469,6 +492,7 @@ WORD(interpret,interpret,enter,   parse,  //twodup, type, space,//(1/4) // a' n'
 WORD(accept,    accept,    enter, readline, interpret)
 CODE(resetsp,   resetsp,   MOVI(SP,0xf000))
 CODE(resetrsp,  resetrsp,  MOVI(BP,0x0100))
+CODE(bye,     bye,       HALT)
 WORD(quit,      quit,      enter, resetsp, accept, ok, branch, -4)
 WORD(abort,     abort,     enter, resetrsp, lbracket, quit)
 HEADLESS(cold,  cold,      MOVI(SI,abort+2))
@@ -493,6 +517,6 @@ p = mem + 0xC000;
 memcpy( p, src, sizeof src );
 
 if(trace){P("\n");}
-trace=1;
+//trace=0;
 return  0;}
 
