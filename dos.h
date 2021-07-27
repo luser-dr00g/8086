@@ -51,6 +51,9 @@ US *basic_break_key_isr;
 US *basic_disk_error_isr;
 UC *intra_app_communication_area;
 
+UC *rom_release_date;
+UC *machine_id;
+
 static int load_dos( char *mem ){
   handles[0] = stdin;
   handles[1] = stdout;
@@ -106,8 +109,8 @@ static int load_dos( char *mem ){
   { US x[2] = { 0 };   memcpy( basic_disk_error_isr = mem + 0x51a, x, sizeof x ); }
   { UC x[16]= { 0 };   memcpy( intra_app_communication_area = mem + 0x4f0, x, sizeof x ); }
   
-  { UC x[8] = { 0 }; memcpy( mem + 0xFfff5, x, sizeof x ); } //ROM release date
-  { UC x[] = { 0 }; memcpy( mem + 0xFfffe, x, sizeof x ); } //machine ID
+  { UC x[8] = { 0 };   memcpy( rom_release_date = mem + 0xFfff5, x, sizeof x ); }
+  { UC x[] = { 0 };    memcpy( machine_id = mem + 0xFfffe, x, sizeof x ); }
 }
 
 static int keyboard_input_with_echo(){
@@ -179,7 +182,7 @@ static int read_file(){
 static int write_file(){
   U handle = wget(bx);
   if(trace>1){printf("writing %d bytes from %x to handle %d\n",
-                    wget(cx), wget(dx), wget(bx)); }
+                    wget(cx), wget(dx), handle); }
   U count = fwrite(mem + wget(dx), 1, wget(cx), handles[ handle ]);
   if(  count == wget(cx)  ){
     clc();
