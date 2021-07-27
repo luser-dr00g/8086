@@ -21,10 +21,10 @@ T signed char C; T unsigned char UC; T void V;  // to make everything shorter
 U o,w,d,f; // opcode, width, direction, extra temp variable (was for a flag, hence f)
 U x,y,z;   // left operand, right operand, result
 void *p;   // location to receive result
-UC halt,debug=0,trace=1,reg[28],null[2],mem[0x100000]={ // operating flags, register memory, RAM
-    1, (3<<6),        // ADD ax,ax
-    1, (3<<6)+(4<<3), // ADD ax,sp
-    3, (3<<6)+(4<<3), // ADD sp,ax
+UC halt,debug=0,trace=0,reg[28],null[2],mem[0x100000]={ // operating flags, register memory, RAM
+    1, 0300 /*(3<<6)*/,        // ADD ax,ax
+    1, 0340 /*(3<<6)+(4<<3)*/, // ADD ax,sp
+    3, 0340 /*(3<<6)+(4<<3)*/, // ADD sp,ax
     0xf4 //HLT
 };
 
@@ -79,6 +79,7 @@ void escape( UC vv[7] ){
   case 0x15:
   case 0x16: bios( vv );
   CASE 0x21: dos( vv );
+  DEFAULT: P("unhandled escape code %02x\n", vv[0]);
   }
 }
 
@@ -88,7 +89,7 @@ U decreg(U reg,U w){    // decode the reg field, yielding a uintptr_t to the reg
     if (w)R (U)((US*[]){ax,cx,dx,bx,sp,bp,si,di}[reg]);
     else R (U)((UC*[]){al,cl,dl,bl,ah,ch,dh,bh}[reg]); }
 U rs(US*x,US*y){ R get_(x,1)+get_(y,1); }  // fetch and sum two full-words
-U decrm(rm r,U w){      // decode the r/m byte, yielding uintptr_t
+U decrm(rm r,U w){      // decode the r/m field, yielding uintptr_t to register or memory
     U x=(U[]){rs(bx,si),rs(bx,di),rs(bp,si),rs(bp,di),
               get_(si,1),get_(di,1),get_(bp,1),get_(bx,1)}[r.r_m];
     switch(r.mod){ CASE 0: if (r.r_m==6) R (U)(mem+fetchw());
@@ -125,7 +126,8 @@ U decseg(U sr){         // decode segment register
     // immediate to accumulator
 #define IA x=(U)(p=w?(UC*)ax:al); \
            x=get_((void*)x,w); \
-           y=w?fetchw():fetchb();
+           y=w?fetchw():fetchb(); \
+           d=1;
 
 #define SETPF wput(fl, \
          wget(fl) | ( ((z)^(z>>1)^(z>>2)^(z>>3)^(z>>4)^(z>>5)^(z>>6)^(z>>7))&1 ?0:PF ) );
@@ -195,8 +197,7 @@ U decseg(U sr){         // decode segment register
             y=get_((void*)y,w); \
             if(trace>1){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); } \
             if(trace>1){ \
-                P("%s ", \
-                  (C*[]){"ADD","OR","ADC","SBB","AND","SUB","XOR","CMP"}[r.reg]); } \
+                P("%s ", (C*[]){"ADD","OR","ADC","SBB","AND","SUB","XOR","CMP"}[r.reg]); } \
             switch(r.reg){CASE 0:ADD \
                           CASE 1:OR \
                           CASE 2:ADC \
@@ -225,8 +226,8 @@ U decseg(U sr){         // decode segment register
 #define POPF POP(fl)
 #define SAHF x=*fl; y=*ah; x=(x&~0xff)|y; *fl=x;
 #define LAHF *ah=(UC)*fl;
-#define mMOV if(d){ x=get_(mem+fetchw(),w); w?*ax=x:(*al=x); } \
-             else { put_(mem+fetchw(),w?*ax:*al,w); }
+#define mMOV if(d){ x=get_(mem+fetchw(),w); put_(ax,x,w); /*w?*ax=x:(*al=x);*/ } \
+             else { put_(mem+fetchw(), get_(ax,w) /*w?*ax:*al*/,w ); }
 #define Offset (w+1)*(1-d*2) //(w,d)=? (0,0)=1 (1,0)=2 (0,1)=-1 (1,1)=-2
 #define MOVS put_(mem+wget(di),get_(mem+wget(si),w),w); \
              d=!!(*fl&DF); *di+=Offset; *si+=Offset;
@@ -268,10 +269,10 @@ U decseg(U sr){         // decode segment register
 	      CASE 5: SHR ; \
               CASE 7: SAR ; \
               }
-#define ROL z=y<<1|w?(y&0x8000)>>15:(y&0x80)>>7;
-#define ROR z=y>>1|w?(y&1)<<15:(y&1)<<7;
-#define RCL
-#define RCR
+#define ROL z=y<<1|w?(y&0x8000)>>15:(y&0x80)>>7; RESULT
+#define ROR z=y>>1|(y&1)<<(w?15:7); RESULT
+#define RCL d=w?y>>15:y>>7; z=y<<1|!!(*fl&CF); *fl&=~CF; *fl|=d?CF:0; RESULT
+#define RCR d=y&1; z=y>>1|(!!(*fl&CF))<<w?15:7; *fl&=~CF; *fl|=d?CF:0; RESULT
 #define SHL z=y<<1; RESULT
 #define SHR z=y>>1; RESULT
 #define SAR z=(w?(I)(S)(US)y:(I)(C)(UC)y)>>1; RESULT
@@ -303,7 +304,7 @@ U decseg(U sr){         // decode segment register
 #define DIV  if(!y){INT0 return;} \
              if(w){d=*dx<<16|*ax; z=d/y; f=d%y; *ax=z; *dx=f;} \
              else{z=*ax/y; f=*ax%y; *al=z; *ah=f;} \
-             if(z>(w?0xffff:0xff)){INT0 return;}
+             //if(z>(w?0xffff:0xff)){INT0 return;}
 #define IDIV if(!y){INT0 return;} \
              if(w){d=*dx<<16|*ax; z=(I)d/(S)y; f=(I)d%(S)y; *ax=z; *dx=f;} \
              else{z=(S)*ax/(UC)y; f=(S)*ax%(UC)y; *al=z; *ah=f;} \
@@ -466,9 +467,9 @@ I main(I c,C**v){
         load(v[1]);     //     load named file
     }else{
         load_bios( mem ); //0000-03FF F000-F0FF
-	puts("bios");
+	//puts("bios");
 	load_dos( mem );  //0400-05FF
-	puts("dos");
+	//puts("dos");
         forth( mem, mem + (*ip=0x600) );
     }
     *sp=0xF000;          // initialize stack pointer
