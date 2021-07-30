@@ -27,6 +27,22 @@ UC halt,debug=0,trace=0,reg[28],null[2],mem[0x100000]={ // operating flags, regi
     3, 0340 /*(3<<6)+(4<<3)*/, // ADD sp,ax
     0xf4 //HLT
 };
+// memory map
+// 0:0000-0:03ff interrupt vector table
+// 0:0400-0:05ff dos global variables
+// 0:0600-0:06ff forth boot code-> ... <-forth return stack
+// 0:0700-0:1fb6 forth dictionary
+// ...
+// 0:C000-0:C3ff screen1
+// 0:C400-0:C7ff screen2
+// 0:C800-0:CBff screen3
+// 0:CC00-0:CFff screen...
+// ...
+//       -0:F000 <- stack area
+// 0:F000-0:F1ff bios interrupt handlers
+// 0:F200-0:F264 forth tib (terminal input buffer)
+// F:fff5-F:fffd rom release date
+// F:fffe-F:fffe machine id
 
 // register declaration and initialization
 #define H(_)_(al)_(ah)_(cl)_(ch)_(dl)_(dh)_(bl)_(bh)
@@ -414,9 +430,9 @@ _(lock, LOCK)         _(nopN, NOP(N))        _(rep, REP)           _(repz, REPZ)
 _(hlt, HLT)           _(cmc, CMC)            _(grp1b, Grp1)        _(grp1w, Grp1)       /*f4-f7*/\
 _(clc, CLC)           _(stc, STC)            _(cli, CLI)           _(sti, STI)          /*f8-fb*/\
 _(cld, CLD)           _(std, STD)            _(grp2b, Grp2)        _(grp2w, Grp2)       /*fc-ff*/
-#define OPF(a,b)void a(){DW b;}     // generate opcode function
-#define OPN(a,b)a,                  // extract name
-OP(OPF)void(*tab[])()={OP(OPN)};    // generate functions, declare and populate fp table with names
+#define OPF(a,b)void a(void){DW b;}// generate opcode function
+#define OPN(a,b)a,                 // extract name
+OP(OPF)void(*tab[])()={OP(OPN)};   // generate functions, declare and populate fp table with names
 
 V clean(C*s){I i;       // replace unprintable characters in 80-byte buffer with spaces
     for(i=0;i<80;i++)
@@ -457,9 +473,10 @@ I load(C*f){struct stat s; FILE*fp;     // load a file into memory at address ze
     R (fp=fopen(f,"rb"))
         && fstat(fileno(fp),&s) || fread(mem,s.st_size,1,fp); }
 
-#include "forth3.h"
+#include "asm8086.h"
 #include "bios.h"
 #include "dos.h"
+#include "forth3.h"
 
 I main(I c,C**v){
     init();
