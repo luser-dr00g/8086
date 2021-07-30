@@ -62,6 +62,7 @@
 #undef HALT
 #undef INT
 #undef MOVAXI
+#undef AXCH
 #undef CALL
 #undef ESC
 #undef IRET
