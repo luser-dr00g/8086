@@ -87,6 +87,13 @@
 #define LITTLEENDIAN(w) (w)%0x100,(w)/0x100
 #define MOVI(r,a) 0xb8+r,LITTLEENDIAN(a)
 #define MOVBI(r,a) 0xb0+r,a
+#define AXCH(r)   0x90+r
 #define CALL      0xE8
 #define ESC(v)    0xd8+v
 #define IRET      0xcf
+
+#include "ppnarg.h"
+#define PREPEND_COUNT(...) PP_NARG( __VA_ARGS__ ), __VA_ARGS__
+#define APPEND_COUNT(tweak,...) __VA_ARGS__ tweak PP_NARG( __VA_ARGS__ )
+#define FORWARD(...) PREPEND_COUNT( __VA_ARGS__ )
+#define BACKWARD(...) APPEND_COUNT( -, __VA_ARGS__ )
