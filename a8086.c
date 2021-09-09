@@ -345,8 +345,8 @@ U decseg(U sr){         // decode segment register
                            CASE 1: DEC((S*)y); \
                            CASE 2: CALL; \
                            CASE 3: CALL; \
-                           CASE 4: *ip+=(S)y; \
-                           CASE 5: /*JMP*/ *ip=get_((S*)y,1); \
+                           CASE 4: /*JMP*/ wput(ip,wget((S*)y)); \
+                           CASE 5: /*JMP interseg*/ wput(ip,wget((S*)y)); wput(cs,wget((S*)(y+2))); \
                            CASE 6: PUSH((S*)y); \
                            CASE 7: NOP(-2)}
 #define CLC *fl=*fl&~CF;
@@ -473,10 +473,10 @@ I load(C*f){struct stat s; FILE*fp;     // load a file into memory at address ze
     R (fp=fopen(f,"rb"))
         && fstat(fileno(fp),&s) || fread(mem,s.st_size,1,fp); }
 
-#include "asm8086.h"
+#include "forth3.h"
 #include "bios.h"
 #include "dos.h"
-#include "forth3.h"
+
 
 I main(I c,C**v){
     init();
@@ -484,10 +484,11 @@ I main(I c,C**v){
         load(v[1]);     //     load named file
     }else{
         load_bios( mem ); //0000-03FF F000-F0FF
-	//puts("bios");
+	puts("bios");
 	load_dos( mem );  //0400-05FF
-	//puts("dos");
+	puts("dos");
         forth( mem, mem + (*ip=0x600) );
+	puts("forth");
     }
     *sp=0xF000;          // initialize stack pointer
     if(debug) dbg();    // if debugging, debug
