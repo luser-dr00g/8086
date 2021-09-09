@@ -52,13 +52,14 @@
 #define IDIV(m,  r_m) 0xf7,MRM(m,7,r_m)
 #define INC_(m,  r_m) 0xff,MRM(m,0,r_m)
 #define DEC_(m,  r_m) 0xff,MRM(m,1,r_m)
-#define JMP_(m,  r_m) 0xff,MRM(m,5,r_m)
+#define JMP_(m,  r_m) 0xff,MRM(m,4,r_m)
 #define INC(r)    0x40+r
 #define DEC(r)    0x48+r
 #define PUSH(r)   0x50+r
 #define POP(r)    0x58+r
-#define ADDAX(imm) 0x05,LITTLEENDIAN(imm)
-#define SUBAX(imm) 0x2d,LITTLEENDIAN(imm)
+#define MOVAX(imm) 0xb8,DW(imm)
+#define ADDAX(imm) 0x05,DW(imm)
+#define SUBAX(imm) 0x2d,DW(imm)
 #define ADDAL(imm) 0x04,imm
 #define MOVS      0xa5
 #define CMPS      0xa7
@@ -84,8 +85,8 @@
 #define STI       0xfb
 #define CLI       0xfa
 #define INT(no)   0xCD,0x##no
-#define LITTLEENDIAN(w) (w)%0x100,(w)/0x100
-#define MOVI(r,a) 0xb8+r,LITTLEENDIAN(a)
+#define DW(w)     (w)%0x100,(w)/0x100
+#define MOVI(r,a) 0xb8+r,DW(a)
 #define MOVBI(r,a) 0xb0+r,a
 #define AXCH(r)   0x90+r
 #define CALL      0xE8
