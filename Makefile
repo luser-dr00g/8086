@@ -1,6 +1,6 @@
-#CFLAGS+= -Os
 CFLAGS=-Wno-incompatible-pointer-types $(cflags)
-SRC=a8086.c asm8086.h fdict.h forth3.h undefs.h cp437.h bios.h dos.h
+#CFLAGS+=-Os
+SRC=a8086.c asm8086.h fdict.h forth3.h undefs.h cp437.h bios.h dos.h fscr.h
 
 a8086:$(SRC)
 	$(CC) $(CFLAGS) -o $@ $< $(LDLIBS)
