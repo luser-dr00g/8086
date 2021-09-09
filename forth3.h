@@ -1,3 +1,4 @@
+#include "asm8086.h"
 #include "fdict.h"
 
 /*	 W   = AX 	PSP = SP 	all HEADLESS and CODE entries end with NEXT
@@ -53,25 +54,20 @@ CODE(exit,   c_exit,   POPRSP(SI)) // all WORD()s end with c_exit
 CODE(emit,   emit,     POP(AX), MOVBI(AH,0x0E), INT(10))
 CODE(key,    key,      MOVI(AX,0), INT(16), XOR(BYTE,R,AH,AH), PUSH(AX))
 
-CODE(0branch,zbranch,  POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JNZ,2, ADD(,R,SI,AX))
+CODE(0branch,zbranch,  POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JNZ, FORWARD( ADD(,R,SI,AX) ))
 CODE(branch, branch,   LODS, SHL(R,AX), ADD(,R,SI,AX))
-CODE(1branch,onbranch, POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JZ, 2, ADD(,R,SI,AX))
+CODE(1branch,onbranch, POP(BX), LODS, SHL(R,AX), OR(,R,BX,BX), JZ, FORWARD( ADD(,R,SI,AX) ))
 
 CODE(lit,  lit,  LODS, PUSH(AX)
 #ifdef TRACE
-                 , MOV(,R,BX,AX), OR(,R,BX,BX), JGE,7, MOVI(AX,0x0E00+'-'), INT(10), NEG(R,BX),
-		 MOV(,R,AX,BX), XOR(,R,DX,DX), MOVI(CX,10000), DIV(R,CX),
-		   OR(,R,AX,AX), JZ,6,  MOVBI(AH,0x0E), ADDAL(48), INT(10),
-		 MOV(,R,AX,DX), XOR(,R,DX,DX), MOVI(CX,1000), DIV(R,CX),
-		   OR(,R,AX,AX), JZ,6,  MOVBI(AH,0x0E), ADDAL(48), INT(10),
-		 MOV(,R,AX,DX), MOVBI(CL,100), XOR(BYTE,R,CH,CH), BYTE+DIV(R,CL),
-		   MOV(BYTE,R,DL,AH),
-		   OR(BYTE,R,AL,AL), JZ,6,  MOVBI(AH,0x0E), ADDAL(48), INT(10),
-		 MOV(BYTE,R,AL,DL), XOR(BYTE,R,AH,AH), MOVBI(CL,10), BYTE+DIV(R,CL),
-		   MOV(BYTE,R,DL,AH),
-		   OR(BYTE,R,AL,AL), JZ,6,  MOVBI(AH,0x0E), ADDAL(48), INT(10),
-		 MOVBI(AH,0x0E), MOV(BYTE,R,AL,DL), ADDAL(48), INT(10),
-		   MOVI(AX,0x0E00+' '), INT(10)
+     , MOV(,R,BX,AX), OR(,R,BX,BX), JGE,FORWARD( MOVI(AX,0x0E00+'-'), INT(10), NEG(R,BX) ),
+     MOV(,R,AX,BX), XOR(,R,DX,DX), MOVI(CX,10000), DIV(R,CX),
+     MOV(,R,AX,DX), XOR(,R,DX,DX), MOVI(CX,1000), DIV(R,CX),
+     MOV(,R,AX,DX), MOVBI(CL,100), XOR(BYTE,R,CH,CH), BYTE+DIV(R,CL),
+       MOV(BYTE,R,DL,AH),
+     MOV(BYTE,R,AL,DL), XOR(BYTE,R,AH,AH), MOVBI(CL,10), BYTE+DIV(R,CL),
+       MOV(BYTE,R,DL,AH),
+     MOVBI(AH,0x0E), MOV(BYTE,R,AL,DL), ADDAL(48), INT(10), MOVI(AX,0x0E00+' '), INT(10)
 #endif
 )/**/
 
@@ -117,12 +113,10 @@ CODE(/mod,   divmod,   POP(BX), POP(AX),  CWD, IDIV(R,BX),  PUSH(DX), PUSH(AX))
 CODE(u/mod,  udivmod,  POP(BX), POP(AX),  CWD, DIV(R,BX),   PUSH(DX), PUSH(AX))
 CODE(*/mod,  muldivmod,POP(CX),POP(BX),POP(AX), IMUL(R,BX), IDIV(R,CX),  PUSH(DX), PUSH(AX))
 CODE(*/,     muldiv,   POP(CX),POP(BX),POP(AX), IMUL(R,BX), IDIV(R,CX),  PUSH(AX))
-CODE(+-,     plusminus,POP(BX), OR(,R,BX,BX), JS, 9,
-                         POP(AX), OR(,R,AX,AX), JNS, 2, //(5)
-                         NEG(R,AX),                     //(2)
-                         JMP, 7,                        //(2)
-                         POP(AX), OR(,R,AX,AX), JS, 2,  //(5)
-                         NEG(R,AX),                     //(2)
+CODE(+-,     plusminus,POP(BX), OR(,R,BX,BX), JS, 1+ FORWARD(
+                         POP(AX), OR(,R,AX,AX), JNS, FORWARD( NEG(R,AX) ),
+                         JMP), FORWARD(
+                           POP(AX), OR(,R,AX,AX), JS, FORWARD( NEG(R,AX) ) ),
                        PUSH(AX))
 
 CODE(min,    min,      POP(BX), POP(AX),  CMP(,R,AX,BX), JL,2, MOV(,R,AX,BX),  PUSH(AX))
