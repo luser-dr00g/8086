@@ -66,3 +66,4 @@
 #undef CALL
 #undef ESC
 #undef IRET
+#undef DW
