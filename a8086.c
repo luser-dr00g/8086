@@ -298,7 +298,7 @@ U decseg(U sr){         // decode segment register
 #define LOOPNZ
 #define LOOPZ
 #define LOOP
-#define JCXZ
+#define JCXZ y=(S)(C)fetchb(); if(!*cx) *ip+=(S)y;
 #define IN
 #define OUT
 #define INv
