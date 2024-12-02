@@ -293,7 +293,7 @@ U decseg(U sr){         // decode segment register
 #define SHR z=y>>1; RESULT
 #define SAR z=(w?(I)(S)(US)y:(I)(C)(UC)y)>>1; RESULT
 #define ShiftCL rm r=mrm(fetchb());
-#define XLAT
+#define XLAT *al=mem[*bx+*al];
 #define ESC(v) UC vv[7]={0}; for(int i=0; i<v; ++i) vv[i]=fetchb(); escape(vv);
 #define LOOPNZ
 #define LOOPZ
