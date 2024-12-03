@@ -295,9 +295,9 @@ U decseg(U sr){         // decode segment register
 #define ShiftCL rm r=mrm(fetchb());
 #define XLAT *al=mem[*bx+*al];
 #define ESC(v) UC vv[7]={0}; for(int i=0; i<v; ++i) vv[i]=fetchb(); escape(vv);
-#define LOOPNZ
-#define LOOPZ
-#define LOOP
+#define LOOP y=(S)(C)fetchb(); if(--*cx) *ip+=(S)y;
+#define LOOPZ y=(S)(C)fetchb(); if(--*cx&&*fl&ZF) *ip+=(S)y;
+#define LOOPNZ y=(S)(C)fetchb(); if(--*cx&&!(*fl&ZF)) *ip+=(S)y;
 #define JCXZ y=(S)(C)fetchb(); if(!*cx) *ip+=(S)y;
 #define IN
 #define OUT
