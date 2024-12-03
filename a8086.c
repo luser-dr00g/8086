@@ -305,7 +305,7 @@ U decseg(U sr){         // decode segment register
 #define OUTv
 #define JMP x=fetchw(); *ip+=(S)x;
 #define sJMP x=(S)(C)fetchb(); *ip+=(S)x;
-#define FARJMP
+#define FARJMP x=fetchw(); y=fetchw(); *cs = y; *ip = x;
 #define LOCK
 #define REP
 #define REPZ
