@@ -269,7 +269,7 @@ U decseg(U sr){         // decode segment register
                *cs = wget(mem+4*x+2); \
                *ip = f; \
                if(trace>1)P("ip=%" PRIxPTR " ",(U)*ip);
-#define INT0   INT(0)
+#define INTO   if(*fl&OF){INT(4)}
 #define IRET   POP(ip); POP(cs); POP(fl);
 #define Shift rm r=mrm(fetchb()); \
               y=decrm(r,w); \
@@ -417,7 +417,7 @@ _(movspi, iMOVw(sp))  _(movbpi, iMOVw(bp))   _(movsii, iMOVw(si))  _(movdii, iMO
 _(nopI, NOP(I))       _(nopJ, NOP(J))        _(reti, RET(fetchw())) _(retz, RET(0))     /*c0-c3*/\
 _(les, LES)           _(lds, LDS)            _(movimb, RMP iMOVm)  _(movimw, RMP iMOVm) /*c4-c7*/\
 _(nopK, NOP(K))       _(nopL, NOP(P))        _(freti, fRET(fetchw())) _(fretz, fRET(0)) /*c8-cb*/\
-_(int3, INT(3))       _(inti, INT(fetchb())) _(int0, INT0)         _(iret, IRET)        /*cc-cf*/\
+_(int3, INT(3))       _(inti, INT(fetchb())) _(into, INTO)         _(iret, IRET)        /*cc-cf*/\
 _(shiftb, Shift)      _(shiftw, Shift)       _(shiftbv, ShiftCL)   _(shiftwv, ShiftCL)  /*d0-d3*/\
 _(aam, AAM)           _(aad, AAD)            _(nopM, NOP(M))       _(xlat, XLAT)        /*d4-d7*/\
 _(esc0, ESC(0))       _(esc1, ESC(1))        _(esc2, ESC(2))       _(esc3, ESC(3))      /*d8-db*/\
