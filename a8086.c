@@ -317,14 +317,14 @@ U decseg(U sr){         // decode segment register
              else{z=*al*y; *ax=z;} MULFLAGS
 #define IMUL if(w){z=(I)*ax*(I)y; *ax=z; *dx=z>>16;} \
              else{z=(I)*al*(I)y; *ax=z;} IMULFLAGS
-#define DIV  if(!y){INT0 return;} \
+#define DIV  if(!y){INT(0) return;} \
              if(w){d=*dx<<16|*ax; z=d/y; f=d%y; *ax=z; *dx=f;} \
              else{z=*ax/y; f=*ax%y; *al=z; *ah=f;} \
-             //if(z>(w?0xffff:0xff)){INT0 return;}
-#define IDIV if(!y){INT0 return;} \
+             //if(z>(w?0xffff:0xff)){INT(0) return;}
+#define IDIV if(!y){INT(0) return;} \
              if(w){d=*dx<<16|*ax; z=(I)d/(S)y; f=(I)d%(S)y; *ax=z; *dx=f;} \
              else{z=(S)*ax/(UC)y; f=(S)*ax%(UC)y; *al=z; *ah=f;} \
-             if((I)z>(w?0x7fff:0x7f) || (I)z<(w?-0x7fff:-0x7f)){INT0 return;}
+             if((I)z>(w?0x7fff:0x7f) || (I)z<(w?-0x7fff:-0x7f)){INT(0) return;}
 #define Grp1 rm r=mrm(fetchb()); \
              y=decrm(r,w); \
 	     p=(V*)y; \
