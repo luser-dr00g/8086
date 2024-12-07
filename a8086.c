@@ -117,6 +117,9 @@ U decseg(U sr){         // decode segment register
   R (U)((US*[]){es,cs,ss,ds}[sr&3]);
 }
 
+V (*repstr)();
+#define CLRREP repstr=(V(*)())0;
+
 // opcode helpers
     // set d and w from o
 #define DW  if(trace>1){ P("%s: ",__func__); } \
@@ -245,19 +248,24 @@ U decseg(U sr){         // decode segment register
 #define mMOV if(d){ x=get_(mem+fetchw(),w); put_(ax,x,w); /*w?*ax=x:(*al=x);*/ } \
              else { put_(mem+fetchw(), get_(ax,w) /*w?*ax:*al*/,w ); }
 #define Offset (w+1)*(1-d*2) //(w,d)=? (0,0)=1 (1,0)=2 (0,1)=-1 (1,1)=-2
-#define MOVS put_(mem+wget(di),get_(mem+wget(si),w),w); \
-             d=!!(*fl&DF); *di+=Offset; *si+=Offset;
-#define CMPS x=(U)(mem+wget(si)); y=(U)(mem+wget(di));\
+#define MOVS put_(mem+es_(di),get_(mem+ds_(si),w),w); \
+             d=!!(*fl&DF); *di+=Offset; *si+=Offset; \
+             if(repstr)repstr();
+#define CMPS x=(U)(mem+ds_(si)); y=(U)(mem+es_(di));\
              if(trace>1){ P("x:%" PRIdPTR " ",x); P("y:%" PRIdPTR " ",y); } \
              LDXY CMP \
-             d=!!(*fl&DF); *di+=Offset; *si+=Offset;
-#define STOS put_(di,w?*ax:*al,w); \
-             d=!!(*fl&DF); *di+=Offset;
-#define LODS if(w) *ax=get_(mem+*si,w); else *al=get_(mem+*si,w); \
-             d=!!(*fl&DF); *si+=Offset;
-#define SCAS z=(x=w?*ax:*al)-(y=get_(di,w)); \
+             d=!!(*fl&DF); *di+=Offset; *si+=Offset; \
+             if(repstr)repstr();
+#define STOS put_(mem+es_(di),w?*ax:*al,w); \
              d=!!(*fl&DF); *di+=Offset; \
-             LOGFLAGS d=1; SUBFLAGS
+             if(repstr)repstr();
+#define LODS if(w) *ax=get_(mem+ds_(si),w); else *al=get_(mem+ds_(si),w); \
+             d=!!(*fl&DF); *si+=Offset; \
+             if(repstr)repstr();
+#define SCAS z=(x=w?*ax:*al)-(y=get_(mem+es_(di),w)); \
+             d=!!(*fl&DF); *di+=Offset; \
+             LOGFLAGS d=1; SUBFLAGS \
+             if(repstr)repstr();
 #define iMOVb(r) (*r)=fetchb();
 #define iMOVw(r) if(trace>1)P("r:%" PRIxPTR " ",(U)r); (*r)=fetchw();
 #define RET(v) POP(ip); if(v)*sp+=v*2;
@@ -307,8 +315,10 @@ U decseg(U sr){         // decode segment register
 #define sJMP x=(S)(C)fetchb(); *ip+=(S)x;
 #define FARJMP x=fetchw(); y=fetchw(); *cs = y; *ip = x;
 #define LOCK
-#define REP
-#define REPZ
+V f_rep(){--*cx; if(*cx)--*ip; else CLRREP}
+V f_repz(){if(*fl&ZF)--*ip; else CLRREP}
+#define REP if(!*cx){fetchb();return;} repstr=f_rep;
+#define REPZ if(!*cx){fetchb();return;} repstr=f_repz;
 #define HLT if(trace>1)P("HALT\n"); halt=1
 #define CMC *fl=(*fl^CF);
 #define NOT  z=~y; RESULT
