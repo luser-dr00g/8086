@@ -191,6 +191,7 @@ V (*repstr)();
 #define XOR z=x^y; LOGFLAGS RESULT
 #define INC(r) w=1; d=1; p=(V*)r; x=(S)*r; y=1; f=*fl&CF; ADD *fl=(*fl&~CF)|f;
 #define DEC(r) w=1; d=1; p=(V*)r; x=(S)*r; y=1; f=*fl&CF; SUB *fl=(*fl&~CF)|f;
+#define SEG(S)
 #define DAA if((*al&0xf)>9||F(AF)){*al+=6;STA}else CLA \
             if((*al&0xf0)>0x90||F(CF)){*al+=0x60;STC}else CLC \
             z=*al; LOGFLAGS SETPF
@@ -382,13 +383,13 @@ _(adcbi, IA ADC)      _(adcwi, IA ADC)       _(pushss, PUSH(ss))   _(popss, POP(
 _(sbbbf, RM SBB)      _(sbbwf, RM SBB)       _(sbbbt,  RM SBB)     _(sbbwt, RM SBB)     /*18-1b*/\
 _(sbbbi, IA SBB)      _(sbbwi, IA SBB)       _(pushds, PUSH(ds))   _(popds, POP(ds))    /*1c-1f*/\
 _(andbf, RM AND)      _(andwf, RM AND)       _(andbt, RM AND)      _(andwt, RM AND)     /*20-23*/\
-_(andbi, IA AND)      _(andwi, IA AND)       _(esseg, )            _(daa, DAA)          /*24-27*/\
+_(andbi, IA AND)      _(andwi, IA AND)       _(esseg, SEG(es))     _(daa, DAA)          /*24-27*/\
 _(subbf, RM SUB)      _(subwf, RM SUB)       _(subbt, RM SUB)      _(subwt, RM SUB)     /*28-2b*/\
-_(subbi, IA SUB)      _(subwi, IA SUB)       _(csseg, )            _(das, DAS)          /*2c-2f*/\
+_(subbi, IA SUB)      _(subwi, IA SUB)       _(csseg, SEG(cs))     _(das, DAS)          /*2c-2f*/\
 _(xorbf, RM XOR)      _(xorwf, RM XOR)       _(xorbt, RM XOR)      _(xorwt, RM XOR)     /*30-33*/\
-_(xorbi, IA XOR)      _(xorwi, IA XOR)       _(ssseg, )            _(aaa, AAA)          /*34-37*/\
+_(xorbi, IA XOR)      _(xorwi, IA XOR)       _(ssseg, SEG(ss))     _(aaa, AAA)          /*34-37*/\
 _(cmpbf, RM CMP)      _(cmpwf, RM CMP)       _(cmpbt, RM CMP)      _(cmpwt, RM CMP)     /*38-3b*/\
-_(cmpbi, IA CMP)      _(cmpwi, IA CMP)       _(dsseg, )            _(aas, AAS)          /*3c-3f*/\
+_(cmpbi, IA CMP)      _(cmpwi, IA CMP)       _(dsseg, SEG(ds))     _(aas, AAS)          /*3c-3f*/\
 \
 _(incax, INC(ax))     _(inccx, INC(cx))      _(incdx, INC(dx))     _(incbx, INC(bx))    /*40-43*/\
 _(incsp, INC(sp))     _(incbp, INC(bp))      _(incsi, INC(si))     _(incdi, INC(di))    /*44-47*/\
