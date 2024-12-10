@@ -117,6 +117,11 @@ U decseg(U sr){         // decode segment register
   R (U)((US*[]){es,cs,ss,ds}[sr&3]);
 }
 
+US*segov;
+#define CLRSEGOV segov=0;
+US*source(US*p,US*seg){ return segment(segov?segov:seg,p); }
+US*dest(US*p,US*seg){ return segment(seg,p); }
+
 V (*repstr)();
 #define CLRREP repstr=(V(*)())0;
 
@@ -191,7 +196,7 @@ V (*repstr)();
 #define XOR z=x^y; LOGFLAGS RESULT
 #define INC(r) w=1; d=1; p=(V*)r; x=(S)*r; y=1; f=*fl&CF; ADD *fl=(*fl&~CF)|f;
 #define DEC(r) w=1; d=1; p=(V*)r; x=(S)*r; y=1; f=*fl&CF; SUB *fl=(*fl&~CF)|f;
-#define SEG(S)
+#define SEG(S) segov = S;
 #define DAA if((*al&0xf)>9||F(AF)){*al+=6;STA}else CLA \
             if((*al&0xf0)>0x90||F(CF)){*al+=0x60;STC}else CLC \
             z=*al; LOGFLAGS SETPF
