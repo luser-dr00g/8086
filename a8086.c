@@ -317,9 +317,9 @@ V (*repstr)();
 #define FARJMP x=fetchw(); y=fetchw(); *cs = y; *ip = x;
 #define LOCK
 V f_rep(){--*cx; if(*cx)--*ip; else CLRREP}
-V f_repz(){if(*fl&ZF)--*ip; else CLRREP}
+V f_repz(){--*cx; if(*cx&&*fl&ZF)--*ip; else CLRREP}
 #define REP if(!*cx){fetchb();return;} repstr=f_rep;
-#define REPZ if(!*cx){fetchb();return;} repstr=f_repz;
+#define REPZ if(!(*cx&&*fl&ZF)){fetchb();return;} repstr=f_repz;
 #define HLT if(trace>1)P("HALT\n"); halt=1
 #define CMC *fl=(*fl^CF);
 #define NOT  z=~y; RESULT
