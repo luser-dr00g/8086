@@ -245,7 +245,7 @@ V (*repstr)();
 #define CBW *ax=(S)(C)*al;
 #define CWD z=(I)(S)*ax; *dx=-(z>>15);
 #define CALL x=w?fetchw():(S)(C)fetchb(); PUSH(ip); (*ip)+=(S)x;
-#define FARCALL PUSH(cs); PUSH(ip);
+#define FARCALL PUSH(cs); PUSH(ip); FARJMP
 #define WAIT
 #define PUSHF PUSH(fl)
 #define POPF POP(fl)
